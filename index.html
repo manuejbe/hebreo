@@ -872,12 +872,139 @@
         </div>`;
     };
 
-    // Stub renderers for screens implemented in later plans
-    App.ui.renderDiccionario = function(el) { App.ui.renderStub(el, 'diccionario'); };
-    App.ui.renderSesion      = function(el) { App.ui.renderStub(el, 'sesion'); };
+    // Stub renderer for sesion (implemented in Plan 05)
+    App.ui.renderSesion = function(el) { App.ui.renderStub(el, 'sesion'); };
 
 
-    /* === 7. INICIO SCREEN === */
+    /* === 8. DICCIONARIO: SEARCH NORMALIZATION === */
+
+    function normalizeSearch(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/[֑-ׇ]/g, '')   // strip Hebrew niqqud/cantillation
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')  // strip Spanish accents
+        .toLowerCase()
+        .trim();
+    }
+
+
+    /* === 9. DICCIONARIO SCREEN (SPEC §4.12) === */
+
+    App.ui.renderDiccionario = function(el) {
+      // Group words by category, preserving original order from vocab
+      const catOrder = [];
+      const catMap = {};
+      for (const w of App.state.vocab) {
+        if (!catMap[w.cat]) { catMap[w.cat] = []; catOrder.push(w.cat); }
+        catMap[w.cat].push(w);
+      }
+
+      // Column definitions per word kind
+      const kindCols = {
+        verb:     { cols: ['es','msg'],            heads: ['Español','<span lang="he" dir="rtl">פועל</span>'] },
+        expr:     { cols: ['es','msg'],            heads: ['Español','<span lang="he" dir="rtl">ביטוי</span>'] },
+        country:  { cols: ['es','msg','group'],    heads: ['Español','<span lang="he" dir="rtl">מדינה</span>','<span lang="he" dir="rtl">אזור</span>'] },
+        gendered: { cols: ['es','msg','fsg','mpl','fpl'], heads: ['Español','<span lang="he" dir="rtl">יחיד</span>','<span lang="he" dir="rtl">יחידה</span>','<span lang="he" dir="rtl">רבים</span>','<span lang="he" dir="rtl">רבות</span>'] },
+        noun:     { cols: ['es','msg','mpl'],      heads: ['Español','<span lang="he" dir="rtl">יחיד</span>','<span lang="he" dir="rtl">רבים</span>'] }
+      };
+      const heFields = new Set(['msg','fsg','mpl','fpl','group']);
+
+      function renderWordTable(words) {
+        if (!words.length) return '';
+        const { cols, heads } = kindCols[words[0].kind] || kindCols.noun;
+        const thRow = heads.map((h, i) =>
+          `<th style="padding:var(--sp-2) var(--sp-3);text-align:${i===0?'left':'right'};font:600 var(--text-xs) var(--font-body);color:var(--text-muted);border-bottom:2px solid var(--border);white-space:nowrap;">${h}</th>`
+        ).join('');
+        const tbRows = words.map(w => {
+          const box = (App.state.progress[w.id] && App.state.progress[w.id].box) || 0;
+          const cells = cols.map(col => {
+            const val = w[col];
+            if (col === 'es') {
+              return `<td style="padding:var(--sp-2) var(--sp-3);font-size:var(--text-sm);color:var(--text-primary);border-bottom:1px solid var(--border);">${val||'—'} <span class="box-chip" data-box="${box}">${box}</span></td>`;
+            }
+            if (heFields.has(col) && val) {
+              return `<td style="padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--border);text-align:right;">` +
+                `<span class="he" lang="he" dir="rtl" style="font-size:calc(var(--he-scale)*0.875rem);">${val}</span>` +
+                ` <button onclick="App.ui.showToast('Audio disponible en fases futuras')" aria-label="Pronunciar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.875rem;vertical-align:middle;">🔊</button></td>`;
+            }
+            return `<td style="padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--border);color:var(--text-secondary);font-size:var(--text-sm);text-align:${heFields.has(col)?'right':'left'};">${val||'—'}</td>`;
+          }).join('');
+          return `<tr>${cells}</tr>`;
+        }).join('');
+        return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);"><thead><tr>${thRow}</tr></thead><tbody>${tbRows}</tbody></table></div>`;
+      }
+
+      function renderResults(query) {
+        const norm = normalizeSearch(query);
+        if (!norm) {
+          // Default: all categories collapsed
+          return catOrder.map(cat => {
+            const words = catMap[cat];
+            return `<details class="dict-cat" style="border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:var(--sp-3);overflow:hidden;">
+              <summary style="padding:var(--sp-4);cursor:pointer;font:600 1rem var(--font-display);color:var(--text-primary);display:flex;justify-content:space-between;align-items:center;list-style:none;user-select:none;background:var(--surface);">
+                <span>${cat}</span>
+                <span style="font:400 var(--text-sm) var(--font-body);color:var(--text-muted);">${words.length} palabras</span>
+              </summary>
+              <div style="padding:0 var(--sp-1) var(--sp-2);">${renderWordTable(words)}</div>
+            </details>`;
+          }).join('');
+        }
+        // Search mode: flat list grouped by category heading
+        const matched = [];
+        for (const cat of catOrder) {
+          const hits = catMap[cat].filter(w =>
+            normalizeSearch(w.es).includes(norm)  ||
+            normalizeSearch(w.msg).includes(norm) ||
+            normalizeSearch(w.fsg).includes(norm) ||
+            normalizeSearch(w.mpl).includes(norm) ||
+            normalizeSearch(w.fpl).includes(norm)
+          );
+          if (hits.length) matched.push({ cat, hits });
+        }
+        if (!matched.length) {
+          // T-04-01: escape query via textContent before inserting into DOM
+          const safe = document.createElement('span');
+          safe.textContent = query;
+          return `<div style="padding:var(--sp-10) var(--sp-4);text-align:center;">
+            <p style="color:var(--text-muted);margin-bottom:var(--sp-4);">Sin resultados para "<strong>${safe.innerHTML}</strong>"</p>
+            <button onclick="document.getElementById('dict-search').value='';App.ui._dictUpdate('')"
+              style="padding:var(--sp-2) var(--sp-5);border:1.5px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--text-secondary);font:600 var(--text-sm) var(--font-body);cursor:pointer;min-height:44px;">
+              Limpiar búsqueda
+            </button>
+          </div>`;
+        }
+        return matched.map(({ cat, hits }) =>
+          `<div style="margin-bottom:var(--sp-5);">
+            <h3 style="font:600 1rem var(--font-display);color:var(--text-primary);padding:var(--sp-2) 0;border-bottom:1px solid var(--border);margin-bottom:var(--sp-2);">${cat}</h3>
+            ${renderWordTable(hits)}
+          </div>`
+        ).join('');
+      }
+
+      el.innerHTML = `
+        <div class="screen-diccionario">
+          <header style="margin-bottom:var(--sp-5);">
+            <h1 style="font:600 var(--text-4xl) var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-4);">Diccionario</h1>
+            <div style="position:relative;">
+              <input id="dict-search" type="search" placeholder="Buscar en español o hebreo…"
+                oninput="App.ui._dictUpdate(this.value)"
+                style="width:100%;padding:var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 20px);border:1.5px solid var(--border);border-radius:var(--radius-pill);background:var(--surface);color:var(--text-primary);font:400 var(--text-base) var(--font-body);outline:none;transition:border-color var(--dur-fast);min-height:44px;"
+                onfocus="this.style.borderColor='var(--blue-700)'" onblur="this.style.borderColor='var(--border)'"
+                aria-label="Buscar palabras">
+              <svg style="position:absolute;left:var(--sp-4);top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+          </header>
+          <div id="dict-results">${renderResults('')}</div>
+          <div style="height:var(--sp-8);"></div>
+        </div>`;
+
+      App.ui._dictUpdate = function(query) {
+        document.getElementById('dict-results').innerHTML = renderResults(query);
+      };
+    };
+
+
+    /* === 10. INICIO SCREEN === */
 
     App.ui.renderInicio = function(el) {
       // Compute summary counts
@@ -1028,7 +1155,7 @@
     };
 
 
-    /* === 8. ARRANQUE === */
+    /* === 11. ARRANQUE === */
 
     document.addEventListener('DOMContentLoaded', () => App.init());
   </script>
