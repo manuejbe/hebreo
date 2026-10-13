@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing
-last_updated: "2026-10-13T14:11:00Z"
+last_updated: "2026-10-13T14:20:00Z"
 progress:
   total_phases: 10
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # State: Ivrit
@@ -18,28 +18,29 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-10-12)
 
 **Core value:** El progreso Leitner que hace que el usuario vuelva a estudiar todos los días
-**Current focus:** Phase 1 — Base (Plan 04 completo, Plan 05 siguiente)
+**Current focus:** Phase 1 — Base COMPLETA. Próximo: Phase 2.
 
 ## Current Phase
 
-**Phase 1: Base**
+**Phase 1: Base — COMPLETA**
 Goal: La app carga y normaliza vocab.json, el router funciona, el layout mobile/dark es correcto, la pantalla Inicio muestra el resumen real, el Diccionario busca y el Selector de sesión configura una sesión.
 
-Status: Executing — 4/5 planes completados (2026-10-13)
+Status: Completed — 5/5 planes completados (2026-10-13)
 
 **Completed plans:**
 - Plan 01: HTML Shell + CSS Design System — `13f76f8`
 - Plan 02: Data loading y normalización de vocab.json — `c84e27a`
 - Plan 03: Router + pantallas base — `0f773b2`
 - Plan 04: Diccionario — `10ea949`
+- Plan 05: Selector de Sesión — `1625162`
 
-**Next:** Plan 05 — Selector de Sesión
+**Next:** Phase 2 — (por planificar)
 
 ## Phase History
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| — | — | — |
+| Phase 1: Base | Completed | 2026-10-13 |
 
 ## Active Blockers
 
@@ -62,23 +63,21 @@ None.
 - <details>/<summary> para acordeones Diccionario — nativo, accesible, sin JS de toggle
 - XSS T-04-01: span.textContent = query; safe.innerHTML — una línea, correcto para todos los chars HTML
 - heFields Set incluye 'group': en categoría Countries el campo región es texto hebreo
+- Validación allowlist de lastSession al cargar (T-05-01) — campos inválidos caen a defaults silenciosamente
+- Re-render completo en cada interacción de sesión (rerender()) — 735 palabras, <1ms, más simple que diff parcial
+- state.cats = [] semántica 'todas seleccionadas' — evita sincronizar con catOrder al agregar categorías futuras
 
 ## Key Context for Next Phase
 
-- `index.html` creado con todo el CSS base y App scaffold — todos los planes siguientes lo extienden
-- `App.state.vocab[]` poblado con ~735 word objects normalizados al arrancar — Plan 03+ puede consumirlos directamente
+- `index.html` completo con todo el CSS base, App scaffold, data loading, router, Inicio, Diccionario y Sesión
+- `App.state.vocab[]` poblado con ~735 word objects normalizados al arrancar
 - `App.state.progress{}`, `App.state.stats{}` restaurados desde localStorage en `App.data.load()`
-- `App.data.normalize(rawData)` — función pura disponible para re-normalizar datos sync (Plan 04)
-- `HEADER_MAP`, `detectKind()`, `slugify()` en scope global del script — reutilizables en sync logic
-- `Store` helper disponible con `get/set/remove` wrapeados en try/catch
-- Caché de vocab en `ivrit.v1.vocabCache` con campo `updated` para invalidación por fecha ISO
-- `.screen` / `.screen.active` CSS ya presentes — Plan 03 solo necesita implementar el router
-- `App.router` implementado con allowlist de rutas, hashchange, page-leave/page-enter transiciones
-- `App.ui.renderInicio` completo con stats reales, grilla 10 modos (todos grises), barras por categoría
-- `App.ui.renderDiccionario` implementado: 17 acordeones, búsqueda normalizada, RTL, box-chips — Plan 04 completo
-- `App.ui.renderSesion` declarado como stub — listo para Plan 05
+- `App.ui.renderSesion()` implementado: 17 chips de categoría, 4 filtros, 3 direcciones, 4 cantidades
+- `App.ui._sesionState` expuesto: `{ cats, filter, direction, quantity }` — fases siguientes lo leen para configurar modos
+- `ivrit.v1.settings.lastSession` en localStorage: persistencia cross-session desde Phase 1
+- `getMatchingWords()` logic disponible en renderSesion: todas/nuevas/dificiles/hoy
 - `normalizeSearch()` en scope global — strips niqqud hebreo + acentos españoles, lowercase/trim
-- `App.ui._dictUpdate(query)` expuesto para el oninput handler del input de búsqueda
+- `Store` helper disponible con `get/set/remove` wrapeados en try/catch
 - `APPS_SCRIPT_URL` disponible en scope global del script
 
 ## Performance Metrics
@@ -89,7 +88,8 @@ None.
 | 01-base | 02 | 5min | 2 | 1 |
 | 01-base | 03 | 8min | 2 | 1 |
 | 01-base | 04 | 6min | 1 | 1 |
+| 01-base | 05 | 4min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T14:11:00Z — Completed 01-04-PLAN.md*
-*Stopped at: Plan 05 (selector de sesión)*
+*Last session: 2026-10-13T14:20:00Z — Completed 01-05-PLAN.md (Phase 1 Base COMPLETA)*
+*Stopped at: Phase 2 (por planificar)*
