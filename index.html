@@ -412,9 +412,9 @@
 
     /* Flip 3D */
     .card-scene { perspective: 900px; }
-    .card { transform-style: preserve-3d; transition: transform var(--dur-slow) var(--ease-flip); }
+    .card { display:grid; transform-style: preserve-3d; transition: transform var(--dur-slow) var(--ease-flip); }
     .card.flipped { transform: rotateY(180deg); }
-    .card-front, .card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .card-front, .card-back { grid-area: 1/1; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
     .card-back { transform: rotateY(180deg); }
 
     /* Barra de progreso de sesión (DESIGN.md §3.7) */
@@ -1261,7 +1261,7 @@
       // Front face
       const front = document.createElement('div');
       front.className = 'card-front';
-      front.style.cssText = 'position:absolute;inset:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--sp-6);overflow:hidden;';
+      front.style.cssText = 'position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--sp-6);';
 
       // Alef watermark
       const wm = document.createElement('span');
@@ -1306,7 +1306,7 @@
       // Back face
       const back = document.createElement('div');
       back.className = 'card-back';
-      back.style.cssText = 'position:absolute;inset:0;background:var(--blue-900);border-radius:var(--radius-xl);overflow:hidden;';
+      back.style.cssText = 'position:relative;background:var(--blue-900);border-radius:var(--radius-xl);';
 
       const wmBack = document.createElement('span');
       wmBack.setAttribute('aria-hidden', 'true');
