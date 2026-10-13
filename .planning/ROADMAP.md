@@ -32,6 +32,15 @@
 
 **Requirements:** DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, ROUT-01, STAT-01, STAT-02, LAYO-01, LAYO-02, LAYO-03, LAYO-04, LAYO-05, LAYO-06, INIC-01, INIC-02, INIC-03, INIC-04, INIC-05, DICT-01, DICT-02, DICT-03, SESI-01, SESI-02, SESI-03, SESI-04, SESI-05
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — HTML shell + CSS design system (DESIGN.md variables, fonts, bottom nav, theme, App scaffold)
+- [ ] 01-02-PLAN.md — Data loading + normalization (vocab.json fetch, SPEC §2.2 header mapping, kind detection, localStorage cache)
+- [ ] 01-03-PLAN.md — Router + Inicio screen (hash routing, App.state, Inicio with real data, mode grid)
+- [ ] 01-04-PLAN.md — Diccionario screen (search with accent/niqqud normalization, accordion by category, RTL table)
+- [ ] 01-05-PLAN.md — Selector de sesión screen (chips, filters, direction, quantity, remember last selection)
+
 **Success criteria:**
 1. `python3 -m http.server` + Chromium a 390×844: se ven todas las palabras de vocab.json en el Diccionario con su forma hebrea y español
 2. El buscador del Diccionario filtra en tiempo real ignorando acentos y niqqud
