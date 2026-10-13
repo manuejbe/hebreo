@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Estudia vocabulario hebreo con repetición espaciada">
-  <title>Ivrit</title>
+  <title>Practica Hebreo</title>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0052B4">
   <link rel="apple-touch-icon" href="icon.svg">
@@ -3137,7 +3137,11 @@
             [...grid.children].forEach((b, j) => {
               if (options[j].correct) { b.style.background='var(--green-bg)'; b.style.borderColor='var(--green)'; }
             });
-            setTimeout(() => renderQuestion(), 800);
+            const nextBtn = document.createElement('button');
+            nextBtn.style.cssText = 'display:block;width:calc(100% - var(--sp-8));margin:var(--sp-3) var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--blue-700);color:#fff;border-radius:var(--radius-md);font:700 var(--text-base) var(--font-body);border:none;cursor:pointer;';
+            nextBtn.textContent = 'Siguiente →';
+            nextBtn.addEventListener('click', () => renderQuestion());
+            el.appendChild(nextBtn);
           });
           grid.appendChild(btn);
         });
@@ -3490,7 +3494,11 @@
             else if (b === btn && !opt.correct) { b.style.background='var(--red-bg)'; b.style.borderColor='var(--red)'; }
             else { b.style.opacity='.45'; }
           });
-          setTimeout(() => { App.session.index++; App.ui.renderCompletar(el); }, 800);
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent = 'Siguiente →';
+          nextBtn.style.cssText = 'display:block;margin:var(--sp-3) var(--sp-4) var(--sp-4);width:calc(100% - var(--sp-8));padding:var(--sp-3);background:var(--accent);color:#fff;border:none;border-radius:var(--radius-md);font:600 1rem var(--font-ui);cursor:pointer;';
+          nextBtn.addEventListener('click', () => { App.session.index++; App.ui.renderCompletar(el); });
+          el.appendChild(nextBtn);
         });
         grid.appendChild(btn);
       });
@@ -3626,7 +3634,11 @@
             tr.appendChild(td1); tr.appendChild(td2); table.appendChild(tr);
           }
           el.insertBefore(table, grid.nextSibling);
-          setTimeout(() => { App.session.index++; App.ui.renderConcordancia(el); }, 1200);
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent = 'Siguiente →';
+          nextBtn.style.cssText = 'display:block;margin:var(--sp-3) var(--sp-4) var(--sp-4);width:calc(100% - var(--sp-8));padding:var(--sp-3);background:var(--accent);color:#fff;border:none;border-radius:var(--radius-md);font:600 1rem var(--font-ui);cursor:pointer;';
+          nextBtn.addEventListener('click', () => { App.session.index++; App.ui.renderConcordancia(el); });
+          el.appendChild(nextBtn);
         });
         grid.appendChild(btn);
       });
