@@ -2091,16 +2091,18 @@
       const VALID_FILTERS    = ['todas', 'nuevas', 'dificiles', 'hoy'];
       const VALID_DIRECTIONS = ['es-he', 'he-es', 'mezclada'];
       const VALID_QUANTITIES = [10, 20, 30, 0];
+      const VALID_VARIANTS   = ['es-he', 'sg-pl', 'masc-fem'];
       const state = {
-        cats:      (Array.isArray(raw.cats) && raw.cats.every(c => typeof c === 'string')) ? raw.cats : catOrder.slice(),
-        filter:    VALID_FILTERS.includes(raw.filter)       ? raw.filter    : 'todas',
-        direction: VALID_DIRECTIONS.includes(raw.direction) ? raw.direction : 'es-he',
-        quantity:  VALID_QUANTITIES.includes(raw.quantity)  ? raw.quantity  : 10
+        cats:         (Array.isArray(raw.cats) && raw.cats.every(c => typeof c === 'string')) ? raw.cats : catOrder.slice(),
+        filter:       VALID_FILTERS.includes(raw.filter)         ? raw.filter       : 'todas',
+        direction:    VALID_DIRECTIONS.includes(raw.direction)   ? raw.direction    : 'es-he',
+        quantity:     VALID_QUANTITIES.includes(raw.quantity)    ? raw.quantity     : 10,
+        matchVariant: VALID_VARIANTS.includes(raw.matchVariant)  ? raw.matchVariant : 'es-he'
       };
 
       function saveState() {
         const settings = Store.get('ivrit.v1.settings') || {};
-        settings.lastSession = { cats: state.cats.slice(), filter: state.filter, direction: state.direction, quantity: state.quantity };
+        settings.lastSession = { cats: state.cats.slice(), filter: state.filter, direction: state.direction, quantity: state.quantity, matchVariant: state.matchVariant };
         Store.set('ivrit.v1.settings', settings);
       }
 
@@ -2192,7 +2194,16 @@
             </div>
           </section>
 
-          <!-- Direction -->
+          <!-- Direction / Variant (conditional on pending mode) -->
+          ${(App.session && App.session._pendingMode === 'unir') ? `
+          <section style="margin-bottom:var(--sp-5);">
+            <h2 style="font:600 1.125rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-3);">Variante</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+              ${[{val:'es-he',label:'ES ↔ HE'},{val:'sg-pl',label:'Singular ↔ Plural'},{val:'masc-fem',label:'Masc. ↔ Fem.'}].map(opt => {
+                return chip(opt.label, state.matchVariant === opt.val, "App.ui._sesionSetVariant('"+opt.val+"')");
+              }).join('')}
+            </div>
+          </section>` : `
           <section style="margin-bottom:var(--sp-5);">
             <h2 style="font:600 1.125rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-3);">Dirección</h2>
             <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
@@ -2203,7 +2214,7 @@
                   aria-pressed="${sel}">${opt.label}</button>`;
               }).join('')}
             </div>
-          </section>
+          </section>`}
 
           <!-- Quantity -->
           <section style="margin-bottom:var(--sp-6);">
@@ -2271,8 +2282,14 @@
         rerender();
       };
 
+      App.ui._sesionSetVariant = function(v) {
+        state.matchVariant = v;
+        rerender();
+      };
+
       App.ui._sesionEmpezar = function() {
         const mode = (App.session && App.session._pendingMode) || 'tarjetas';
+        App.session._matchVariant = state.matchVariant;  // pasar variante al session object (D-05)
         App.session.start(mode);
         location.hash = '#/' + mode;
       };
