@@ -1501,8 +1501,271 @@
       }
     };
 
-    // Temporary stub — replaced by Plan 03
-    App.ui.renderOpcionMultiple = App.ui.renderOpcionMultiple || function(el) { App.ui.renderStub(el, 'opcion-multiple'); };
+    /* === 8. OPCION MULTIPLE SCREEN (SPEC §4.4, MCQ-01..04) === */
+
+    /**
+     * Returns 3 distractor words for the MCQ question.
+     * Priority: same kind + same cat. For countries: same group (region) first.
+     * Fallback: same kind any cat → any word. Never duplicates correct word's visible text.
+     * MCQ-01, MCQ-02
+     * @param {Object} correct - the correct word
+     * @param {'es-he'|'he-es'} dir - resolved direction
+     * @returns {Object[]} array of 3 distractor word objects
+     */
+    function getDistractors(correct, dir) {
+      function getText(w) { return dir === 'es-he' ? w.msg : w.es; }
+      const usedTexts = new Set([getText(correct)]);
+
+      function isValid(w) {
+        if (w.id === correct.id) return false;
+        const t = getText(w);
+        if (!t || usedTexts.has(t)) return false;
+        return true;
+      }
+
+      function pickN(pool, n) {
+        const result = [];
+        const arr = pool.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        for (const w of arr) {
+          if (result.length >= n) break;
+          if (!isValid(w)) continue;
+          usedTexts.add(getText(w));
+          result.push(w);
+        }
+        return result;
+      }
+
+      const vocab = App.state.vocab;
+      let distractors = [];
+
+      if (correct.kind === 'country' && correct.group) {
+        // Same region first (MCQ-02)
+        distractors = pickN(vocab.filter(w => w.kind === 'country' && w.group === correct.group), 3);
+      }
+
+      if (distractors.length < 3) {
+        // Same kind + same cat
+        distractors = distractors.concat(pickN(vocab.filter(w => w.kind === correct.kind && w.cat === correct.cat), 3 - distractors.length));
+      }
+
+      if (distractors.length < 3) {
+        // Same kind, any cat
+        distractors = distractors.concat(pickN(vocab.filter(w => w.kind === correct.kind), 3 - distractors.length));
+      }
+
+      if (distractors.length < 3) {
+        // Final fallback: any word
+        distractors = distractors.concat(pickN(vocab, 3 - distractors.length));
+      }
+
+      return distractors.slice(0, 3);
+    }
+
+    App.ui.renderOpcionMultiple = function(el) {
+      if (!App.session || !App.session.words || App.session.words.length === 0) {
+        location.hash = '#/sesion'; return;
+      }
+      if (App.session.index >= App.session.words.length) {
+        App.ui.renderResultado(el); return;
+      }
+
+      const total = App.session.words.length;
+      const idx   = App.session.index;
+      const word  = App.session.words[idx];
+      const pct   = (idx / total) * 100;
+
+      // Resolve direction
+      const dir = App.session.direction === 'mezclada'
+        ? (Math.random() < 0.5 ? 'es-he' : 'he-es')
+        : App.session.direction;
+      App.session._cardDir = dir;
+
+      function getOptionText(w) { return dir === 'es-he' ? (w.msg || '?') : w.es; }
+      const questionText = dir === 'es-he' ? word.es : (word.msg || word.es);
+      const questionIsHe = dir === 'he-es';
+
+      // 1 correct + 3 distractors, shuffled
+      const distractors = getDistractors(word, dir);
+      const options = [{ word, correct: true }, ...distractors.map(w => ({ word: w, correct: false }))];
+      for (let i = options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [options[i], options[j]] = [options[j], options[i]];
+      }
+
+      let answered = false;
+
+      el.innerHTML = '';
+
+      // Progress bar (DESIGN.md §3.7)
+      const progBar = document.createElement('div');
+      progBar.className = 'session-progress';
+      const progFill = document.createElement('div');
+      progFill.className = 'session-progress-fill';
+      progFill.style.width = pct + '%';
+      progBar.appendChild(progFill);
+      el.appendChild(progBar);
+
+      // Counter
+      const counter = document.createElement('p');
+      counter.style.cssText = 'text-align:center;font:600 var(--text-sm) var(--font-body);color:var(--text-muted);padding:var(--sp-6) var(--sp-4) var(--sp-3);';
+      counter.textContent = (idx + 1) + ' / ' + total;
+      el.appendChild(counter);
+
+      // Question
+      const qSection = document.createElement('section');
+      qSection.style.cssText = 'padding:0 var(--sp-4);margin-bottom:var(--sp-5);';
+      const qEl = document.createElement('p');
+      qEl.style.cssText = 'font:600 1.5rem var(--font-display);color:var(--text-primary);text-align:center;line-height:1.3;';
+      if (questionIsHe) {
+        qEl.lang = 'he'; qEl.dir = 'rtl';
+        qEl.style.fontFamily = 'var(--font-hebrew)';
+        qEl.style.fontSize = 'calc(var(--he-scale)*1.5rem)';
+      }
+      qEl.textContent = questionText;  // textContent — XSS safe (T-03-07)
+      qSection.appendChild(qEl);
+      el.appendChild(qSection);
+
+      // Options grid 2x2 (DESIGN.md §3.2)
+      if (!document.getElementById('mcq-grid-style')) {
+        const s = document.createElement('style');
+        s.id = 'mcq-grid-style';
+        s.textContent = '@media (max-width:320px) { .mcq-grid { grid-template-columns:1fr !important; } }';
+        document.head.appendChild(s);
+      }
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);padding:0 var(--sp-4);margin-bottom:var(--sp-5);';
+      grid.classList.add('mcq-grid');
+
+      const optionEls = [];
+
+      options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-md);min-height:64px;padding:var(--sp-4) var(--sp-3) var(--sp-4) var(--sp-8);text-align:left;cursor:pointer;transition:border-color var(--dur-fast),background var(--dur-fast);font:400 var(--text-sm) var(--font-body);color:var(--text-primary);';
+        btn.setAttribute('aria-label', 'Opcion ' + (i + 1) + ': ' + getOptionText(opt.word));
+
+        // Shortcut chip (DESIGN.md §3.2: chip blue-100/blue-700)
+        const chip = document.createElement('span');
+        chip.setAttribute('aria-hidden', 'true');
+        chip.style.cssText = 'position:absolute;top:var(--sp-2);left:var(--sp-2);width:18px;height:18px;background:var(--blue-100);color:var(--blue-700);border-radius:3px;font:600 var(--text-xs) var(--font-body);display:flex;align-items:center;justify-content:center;font-size:0.65rem;';
+        chip.textContent = i + 1;
+        btn.appendChild(chip);
+
+        // Option text
+        const textEl = document.createElement('span');
+        if (dir === 'es-he') {
+          textEl.lang = 'he'; textEl.dir = 'rtl';
+          textEl.style.cssText = 'font-family:var(--font-hebrew);font-size:calc(var(--he-scale)*0.95rem);direction:rtl;display:block;text-align:right;';
+        } else {
+          textEl.style.cssText = 'font:400 var(--text-sm) var(--font-body);';
+        }
+        textEl.textContent = getOptionText(opt.word);  // textContent — XSS safe (T-03-07)
+        btn.appendChild(textEl);
+
+        btn.addEventListener('mouseenter', () => { if (!answered) { btn.style.borderColor = 'var(--blue-600)'; btn.style.background = 'var(--blue-50)'; } });
+        btn.addEventListener('mouseleave', () => { if (!answered) { btn.style.borderColor = 'var(--border)'; btn.style.background = 'var(--surface)'; } });
+        btn.addEventListener('click', () => handleAnswer(i, opt.correct));
+        optionEls.push(btn);
+        grid.appendChild(btn);
+      });
+
+      el.appendChild(grid);
+
+      // "Siguiente" button — hidden until answered
+      const nextBtn = document.createElement('button');
+      nextBtn.style.cssText = 'display:none;width:calc(100% - var(--sp-8));margin:0 var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--blue-700);color:#fff;border-radius:var(--radius-md);font:700 var(--text-base) var(--font-body);border:none;cursor:pointer;transition:background var(--dur-fast);';
+      nextBtn.textContent = 'Siguiente';
+      nextBtn.setAttribute('aria-label', 'Siguiente pregunta');
+      nextBtn.addEventListener('mouseenter', () => { nextBtn.style.background = 'var(--blue-800)'; });
+      nextBtn.addEventListener('mouseleave', () => { nextBtn.style.background = 'var(--blue-700)'; });
+      nextBtn.addEventListener('click', advance);
+      el.appendChild(nextBtn);
+
+      function handleAnswer(chosenIdx, isCorrect) {
+        if (answered) return;  // T-03-08: double-answer guard
+        answered = true;
+
+        App.ui.updateProgress(word.id, isCorrect);
+        App.session.results.push({ wordId: word.id, correct: isCorrect });
+
+        // Apply visual feedback (DESIGN.md §3.2, MCQ-03)
+        options.forEach((opt, i) => {
+          const btn = optionEls[i];
+          btn.style.cursor = 'default';
+          if (opt.correct) {
+            btn.style.background  = 'var(--green-bg)';
+            btn.style.borderColor = 'var(--green)';
+            btn.style.color       = 'var(--green)';
+          } else if (i === chosenIdx && !isCorrect) {
+            btn.style.background  = 'var(--red-bg)';
+            btn.style.borderColor = 'var(--red)';
+            btn.style.color       = 'var(--red)';
+          } else {
+            btn.style.opacity       = '.45';
+            btn.style.pointerEvents = 'none';
+          }
+        });
+
+        // Flash/shake on question (DESIGN.md §3.6)
+        qSection.style.animation = isCorrect ? 'flash-green 350ms ease-out' : 'shake 300ms ease-out';
+        qSection.addEventListener('animationend', () => { qSection.style.animation = ''; }, { once: true });
+
+        // Show all forms of correct word (MCQ-03)
+        const formsPanel = document.createElement('div');
+        formsPanel.style.cssText = 'padding:var(--sp-3) var(--sp-4);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);margin:var(--sp-3) var(--sp-4) 0;';
+        const formsTitle = document.createElement('p');
+        formsTitle.style.cssText = 'font:600 var(--text-xs) var(--font-body);color:var(--text-muted);margin-bottom:var(--sp-2);text-transform:uppercase;letter-spacing:.04em;';
+        formsTitle.textContent = word.es;
+        formsPanel.appendChild(formsTitle);
+        const formsTable = document.createElement('table');
+        formsTable.style.cssText = 'width:100%;border-collapse:collapse;font-size:calc(var(--he-scale)*0.875rem);';
+        function addFormRow(label, val) {
+          if (!val) return;
+          const tr = document.createElement('tr');
+          const tdL = document.createElement('td');
+          tdL.style.cssText = 'padding:2px 0;color:var(--text-muted);font-size:var(--text-xs);width:60px;';
+          tdL.lang = 'he'; tdL.dir = 'rtl'; tdL.style.fontFamily = 'var(--font-hebrew)';
+          tdL.textContent = label;
+          const tdV = document.createElement('td');
+          tdV.style.cssText = 'padding:2px 0;text-align:right;';
+          tdV.lang = 'he'; tdV.dir = 'rtl'; tdV.style.fontFamily = 'var(--font-hebrew)';
+          tdV.textContent = val;
+          tr.appendChild(tdL); tr.appendChild(tdV); formsTable.appendChild(tr);
+        }
+        if      (word.kind === 'noun')     { addFormRow('יחיד', word.msg); if (word.mpl && word.mpl !== word.msg) addFormRow('רבים', word.mpl); }
+        else if (word.kind === 'gendered') { addFormRow('יחיד', word.msg); addFormRow('יחידה', word.fsg); if (word.mpl !== word.msg) addFormRow('רבים', word.mpl); addFormRow('רבות', word.fpl); }
+        else if (word.kind === 'verb')     { addFormRow('פועל', word.msg); }
+        else if (word.kind === 'country')  { addFormRow('מדינה', word.msg); if (word.group) addFormRow('אזור', word.group); }
+        else                               { addFormRow('ביטוי', word.msg); }
+        formsPanel.appendChild(formsTable);
+        el.insertBefore(formsPanel, nextBtn);
+
+        nextBtn.style.display = 'block';
+      }
+
+      function advance() {
+        App.session.index++;
+        App.ui.renderOpcionMultiple(el);
+      }
+
+      // Keyboard shortcuts (MCQ-04: 1-4 choose, Enter advance)
+      function onKey(e) {
+        if (e.key >= '1' && e.key <= '4') {
+          const i = parseInt(e.key, 10) - 1;
+          if (i < options.length) { e.preventDefault(); if (!answered) handleAnswer(i, options[i].correct); }
+        }
+        if (e.key === 'Enter') { e.preventDefault(); if (answered) advance(); }
+      }
+      document.addEventListener('keydown', onKey);
+      // Cleanup keyboard listener when screen leaves DOM (T-03-10)
+      const observer = new MutationObserver(() => {
+        if (!el.isConnected) { document.removeEventListener('keydown', onKey); observer.disconnect(); }
+      });
+      observer.observe(document.getElementById('app-main'), { childList: true });
+    };
 
     // Stub renderer for unimplemented screens
     App.ui.renderStub = function(el, route) {
