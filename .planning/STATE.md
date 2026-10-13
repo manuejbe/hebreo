@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-10-13T18:35:00.000Z"
+last_updated: "2026-10-13T19:00:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 3
-  total_plans: 13
+  total_plans: 15
   completed_plans: 10
-  percent: 77
+  percent: 67
 ---
 
 # State: Ivrit
@@ -23,18 +23,17 @@ See: `.planning/PROJECT.md` (updated 2026-10-13)
 
 ## Current Phase
 
-**Phase 3: Tarjetas y MCQ — COMPLETA**
-Goal: Dos modos de estudio completos que el usuario puede jugar de principio a fin y que actualizan el progreso en localStorage.
+**Phase 4: Unir con flechas — PLANNED, READY TO EXECUTE**
+Goal: El modo de matching con líneas SVG funciona en móvil y desktop, con tap y variantes (ES↔HE, sg↔pl, masc↔fem).
 
-Status: Completed — 3/3 planes completados (2026-10-13)
+Status: Planned — 2 plans, 2 waves (2026-10-13)
 
-**Completed plans:**
+**Plans:**
 
-- Plan 01: Session engine + Leitner (App.session, updateProgress, renderResultado, router wiring) — `7f076d4`
-- Plan 02: Tarjetas screen (flip 3D, swipe, keyboard, dorso por kind, barra de progreso) — `42151f6`
-- Plan 03: MCQ screen (getDistractors, grid 2×2, feedback animado, teclado 1-4+Enter) — `32b61bc`
+- Plan 01 (Wave 1): renderUnir — layout 2 cols, tap-tap logic, SVG lines, feedback, round summary (MATC-01,02,03,04,06)
+- Plan 02 (Wave 2): Variant selector in renderSesion + session.start filtering + router wiring (MATC-05,06)
 
-**Next:** Phase 4 — Unir con flechas
+**Next:** `/gsd-execute-phase 4`
 
 ## Phase History
 
@@ -93,5 +92,5 @@ None.
 | 01-base | 05 | 4min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T18:35:00Z — Phase 3 Tarjetas y MCQ COMPLETA (3/3 planes, UAT aprobado + fix mostrar-respuesta)*
-*Next: Phase 4 — Unir con flechas*
+*Last session: 2026-10-13T19:00:00Z — Phase 4 Unir con flechas PLANIFICADA (2 planes, tap-tap + SVG lines + variants)*
+*Next: /gsd-execute-phase 4*
