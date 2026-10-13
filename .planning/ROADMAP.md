@@ -12,7 +12,7 @@
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
 | 1 | Base | App cargando datos reales con Inicio, Diccionario y navegación completa | DATA-01..06, ROUT-01, STAT-01..02, LAYO-01..06, INIC-01..05, DICT-01..03, SESI-01..05 | Completed (5/5) |
-| 2 | Sincronización | El botón Sincronizar actualiza el vocab desde Google Docs con diff | SYNC-01..05 | Pending |
+| 2 | Sincronización | El botón Sincronizar actualiza el vocab desde Google Docs con diff | SYNC-01..05 | Completed (2/2) |
 | 3 | Tarjetas y MCQ | Dos modos de estudio funcionales actualizando progreso | FLAS-01..06, MCQ-01..04 | Pending |
 | 4 | Unir con flechas | Modo de matching con líneas SVG y drag/touch | MATC-01..06 | Pending |
 | 5 | Progreso Leitner | Repetición espaciada completa, Repaso del día, Estadísticas | LEIT-01..05, RERR-01..02, ESTA-01..03 | Pending |

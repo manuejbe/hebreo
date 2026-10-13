@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-last_updated: "2026-10-13T15:00:00Z"
+status: Executing
+last_updated: "2026-10-13T16:30:00Z"
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 7
 ---
 
 # State: Ivrit
@@ -18,24 +18,27 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-10-12)
 
 **Core value:** El progreso Leitner que hace que el usuario vuelva a estudiar todos los días
-**Current focus:** Phase 2 — Sincronización (planificada, lista para ejecutar).
+**Current focus:** Phase 3 — Tarjetas y MCQ (próxima fase).
 
 ## Current Phase
 
-**Phase 2: Sincronización — Ready to execute**
+**Phase 2: Sincronización — COMPLETA**
 Goal: El botón Sincronizar descarga el vocab desde Google Docs, compara con el actual, muestra el diff y actualiza la caché sin perder progreso.
 
-Status: Planned — 2 planes, 2 waves (2026-10-13)
+Status: Completed — 2/2 planes completados (2026-10-13)
 
-**Plans:**
-- Plan 01: App.sync module (fetchWithTimeout, validateRaw, diffVocab, applyDiff, run) — Wave 1
-- Plan 02: Sync UI (spinner button, result panel, error toasts, wire renderInicio) — Wave 2
+**Completed plans:**
+- Plan 01: App.sync module (fetchWithTimeout, validateRaw, diffVocab, applyDiff, run) — `3dfcaf6`
+- Plan 02: Sync UI (spinner, result panel, error toasts, live date update) — `f113cd6`
+
+**Next:** Phase 3 — Tarjetas y MCQ
 
 ## Phase History
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | Phase 1: Base | Completed | 2026-10-13 |
+| Phase 2: Sincronización | Completed | 2026-10-13 |
 
 ## Active Blockers
 
@@ -86,5 +89,5 @@ None.
 | 01-base | 05 | 4min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T15:00:00Z — Phase 2 Sincronización planned (2 plans, verified)*
-*Next: /gsd-execute-phase 2*
+*Last session: 2026-10-13T16:30:00Z — Phase 2 Sincronización COMPLETA (2/2 planes, UAT aprobado)*
+*Next: Phase 3 — Tarjetas y MCQ*
