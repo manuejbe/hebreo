@@ -109,6 +109,13 @@ Plans:
 - Pantalla de resultado de sesión
 - Actualización básica de progreso (pre-Leitner completo)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Session engine + Leitner basics: App.session, updateProgress, renderResultado, router wiring
+- [ ] 03-02-PLAN.md — Flashcards mode: flip 3D, swipe, keyboard, dorso por kind, barra de progreso
+- [ ] 03-03-PLAN.md — MCQ mode: distractores, grid 2x2, feedback animado, teclado 1-4+Enter
+
 ---
 
 ## Phase 4: Unir con flechas
