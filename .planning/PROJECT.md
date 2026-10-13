@@ -12,7 +12,17 @@ El progreso Leitner que hace que el usuario vuelva a estudiar todos los días, a
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] La app carga y normaliza vocab.json al iniciar (Phase 1)
+- [x] El estado vive en localStorage (Phase 1)
+- [x] El router usa hashes para que funcione el botón "atrás" del celular (Phase 1)
+- [x] El layout es mobile-first, modo oscuro automático y manual (Phase 1)
+- [x] La pantalla Inicio muestra resumen real, grilla de modos (Phase 1)
+- [x] El Diccionario con buscador instantáneo y vista por categoría (Phase 1)
+- [x] El selector de sesión con chips, filtros, cantidad (Phase 1)
+- [x] La sincronización con Google Docs muestra diff sin borrar progreso (Phase 2)
+- [x] El modo Tarjetas flip 3D con swipe y calificación (Phase 3)
+- [x] El modo Opción múltiple con 4 distractores del mismo kind (Phase 3)
+- [x] El modo Unir con flechas (6 pares/ronda, SVG lines, tap-tap, variantes ES↔HE/sg-pl/masc-fem) (Phase 4)
 
 ### Active
 
@@ -96,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-12 after initialization*
+*Last updated: 2026-10-13 — Phase 4 complete (Unir con flechas)*
