@@ -1,0 +1,39 @@
+name: Sync vocab from Google Docs
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday at 9:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download vocab JSON
+        id: download
+        run: |
+          URL="https://script.google.com/macros/s/AKfycbxmqmnYsJrX-ux2YE1TFzfwag76I1VDibe5hewXXa8O8sODnY6qjCdcYlg5dLgE7K2s/exec"
+          curl -fsSL --max-time 30 -o /tmp/vocab_new.json "$URL"
+          if ! jq -e '.categories | length > 0' /tmp/vocab_new.json >/dev/null 2>&1; then
+            echo "ERROR: Invalid vocab JSON"
+            head -5 /tmp/vocab_new.json
+            exit 1
+          fi
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+      - name: Check for changes
+        id: diff
+        run: |
+          if diff -q vocab.json /tmp/vocab_new.json >/dev/null 2>&1; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update vocab.json
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          cp /tmp/vocab_new.json vocab.json
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git add vocab.json
+          git commit -m "chore: sync vocab.json from Google Docs [skip ci]"
+          git push

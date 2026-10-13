@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Tests — Ivrit</title>
+<style>
+  body { font-family: system-ui; padding: 2rem; max-width: 600px; }
+  .pass { color: green; }
+  .fail { color: red; background: #fff0f0; padding: 2px 4px; border-radius: 3px; }
+  h1 { margin-bottom: 1rem; }
+  #out { display: flex; flex-direction: column; gap: 4px; }
+  #summary { margin-top: 1rem; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Tests de normalización — Ivrit</h1>
+<div id="out"></div>
+<p id="summary"></p>
+<script>
+'use strict';
+
+// --- Copy of pure functions from index.html ---
+
+function normalizeHe(str) {
+  return String(str || '')
+    .replace(/[֑-ׇ]/g, '')
+    .replace(/['']/g, '׳')
+    .replace(/[-־]/g, '-')
+    .trim().replace(/\s+/g, ' ');
+}
+
+function normalizeEs(str) {
+  return String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i || j));
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+const FINAL_PAIRS = [['ם','מ'],['ן','נ'],['ץ','צ'],['ף','פ'],['ך','כ']];
+const FINAL_TO_BASE = Object.fromEntries(FINAL_PAIRS.map(([f,b]) => [f,b]));
+
+function normalizeFinals(s) {
+  return s.split('').map(c => FINAL_TO_BASE[c] || c).join('');
+}
+
+function checkAnswerHe(userInput, validForms) {
+  const norm = normalizeHe(userInput);
+  const forms = (validForms || []).filter(Boolean).flatMap(f =>
+    f.split(/[,\/]/).map(s => normalizeHe(s.trim()))
+  ).filter(Boolean);
+  if (!norm) return 'wrong';
+  if (forms.some(f => f === norm)) return 'correct';
+  const normBase = normalizeFinals(norm);
+  if (forms.some(f => normalizeFinals(f) === normBase)) return 'final-letter';
+  if (forms.some(f => levenshtein(norm, f) === 1)) return 'almost';
+  return 'wrong';
+}
+
+function checkAnswerEs(userInput, esField) {
+  const norm = normalizeEs(userInput);
+  if (!norm || !esField) return false;
+  const variants = String(esField).split(/[,;]/).flatMap(v => {
+    v = v.trim();
+    const base = v.replace(/\s*\([^)]*\)/g, '').trim();
+    const results = [base];
+    if (base.includes('/')) {
+      const parts = base.split('/');
+      const stem = parts[0].slice(0, -1);
+      results.push(stem + parts[1], parts[0], parts[1]);
+    }
+    return results.map(r => normalizeEs(r));
+  }).filter(Boolean);
+  return variants.some(v => v === norm);
+}
+
+// --- Tests ---
+
+const tests = [
+  ['normalizeHe strips niqqud', () => normalizeHe('שָׁלוֹם') === 'שלום'],
+  ['normalizeHe trims whitespace', () => normalizeHe('  להיות  ') === 'להיות'],
+  ['normalizeHe collapses spaces', () => normalizeHe('שלום  עולם') === 'שלום עולם'],
+  ['checkAnswerHe exact match', () => checkAnswerHe('להיות', ['להיות']) === 'correct'],
+  ['checkAnswerHe niqqud stripped', () => checkAnswerHe('שָׁלוֹם', ['שלום']) === 'correct'],
+  ['checkAnswerHe final letter ם→מ', () => checkAnswerHe('שלוֹמ', ['שלום']) === 'final-letter'],
+  ['checkAnswerHe final letter ן→נ', () => checkAnswerHe('גינ', ['גין']) === 'final-letter'],
+  ['checkAnswerHe empty input = wrong', () => checkAnswerHe('', ['שלום']) === 'wrong'],
+  ['checkAnswerHe totally wrong', () => checkAnswerHe('aaaa', ['שלום']) === 'wrong'],
+  ['levenshtein identical = 0', () => levenshtein('abc', 'abc') === 0],
+  ['levenshtein 1 substitution', () => levenshtein('abc', 'abx') === 1],
+  ['levenshtein completely different', () => levenshtein('abc', 'xyz') === 3],
+  ['levenshtein insert', () => levenshtein('abc', 'abcd') === 1],
+  ['levenshtein delete', () => levenshtein('abcd', 'abc') === 1],
+  ['checkAnswerHe almost (levenshtein 1)', () => checkAnswerHe('להיותא', ['להיות']) === 'almost'],
+  ['checkAnswerEs simple match', () => checkAnswerEs('grande', 'grande') === true],
+  ['checkAnswerEs strips accents', () => checkAnswerEs('estacion', 'estación') === true],
+  ['checkAnswerEs case insensitive', () => checkAnswerEs('GRANDE', 'grande') === true],
+  ['checkAnswerEs comma variants', () => checkAnswerEs('estar', 'ser, estar') === true],
+  ['checkAnswerEs semicolon variants', () => checkAnswerEs('estar', 'ser; estar') === true],
+  ['checkAnswerEs strips parens', () => checkAnswerEs('tiempo', 'tiempo (meteorológico)') === true],
+  ['checkAnswerEs wrong answer', () => checkAnswerEs('gato', 'perro') === false],
+  ['checkAnswerEs empty input', () => checkAnswerEs('', 'grande') === false],
+];
+
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+for (const [name, fn] of tests) {
+  let ok;
+  try { ok = fn(); } catch(e) { ok = false; }
+  const p = document.createElement('p');
+  p.className = ok ? 'pass' : 'fail';
+  p.textContent = (ok ? '✓ ' : '✗ ') + name;
+  out.appendChild(p);
+  ok ? pass++ : fail++;
+}
+document.getElementById('summary').textContent = `${pass}/${pass+fail} passed` + (fail > 0 ? ` — ${fail} FAILED` : ' — all good!');
+</script>
+</body>
+</html>
