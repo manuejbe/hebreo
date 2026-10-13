@@ -415,7 +415,9 @@
     .card { display:grid; transform-style: preserve-3d; transition: transform var(--dur-slow) var(--ease-flip); }
     .card.flipped { transform: rotateY(180deg); }
     .card-front, .card-back { grid-area: 1/1; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-    .card-back { transform: rotateY(180deg); }
+    .card-back { transform: rotateY(180deg); pointer-events: none; }
+    .card.flipped .card-back  { pointer-events: auto; }
+    .card.flipped .card-front { pointer-events: none; }
 
     /* Barra de progreso de sesión (DESIGN.md §3.7) */
     .session-progress {
