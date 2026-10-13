@@ -11,7 +11,7 @@
 
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
-| 1 | Base | App cargando datos reales con Inicio, Diccionario y navegación completa | DATA-01..06, ROUT-01, STAT-01..02, LAYO-01..06, INIC-01..05, DICT-01..03, SESI-01..05 | In Progress (2/5) |
+| 1 | Base | App cargando datos reales con Inicio, Diccionario y navegación completa | DATA-01..06, ROUT-01, STAT-01..02, LAYO-01..06, INIC-01..05, DICT-01..03, SESI-01..05 | In Progress (4/5) |
 | 2 | Sincronización | El botón Sincronizar actualiza el vocab desde Google Docs con diff | SYNC-01..05 | Pending |
 | 3 | Tarjetas y MCQ | Dos modos de estudio funcionales actualizando progreso | FLAS-01..06, MCQ-01..04 | Pending |
 | 4 | Unir con flechas | Modo de matching con líneas SVG y drag/touch | MATC-01..06 | Pending |
@@ -37,8 +37,8 @@
 Plans:
 - [x] 01-01-PLAN.md — HTML shell + CSS design system (DESIGN.md variables, fonts, bottom nav, theme, App scaffold) — `13f76f8`
 - [x] 01-02-PLAN.md — Data loading + normalization (vocab.json fetch, SPEC §2.2 header mapping, kind detection, localStorage cache) — `c84e27a`
-- [ ] 01-03-PLAN.md — Router + Inicio screen (hash routing, App.state, Inicio with real data, mode grid)
-- [ ] 01-04-PLAN.md — Diccionario screen (search with accent/niqqud normalization, accordion by category, RTL table)
+- [x] 01-03-PLAN.md — Router + Inicio screen (hash routing, App.state, Inicio with real data, mode grid) — `0f773b2`
+- [x] 01-04-PLAN.md — Diccionario screen (search with accent/niqqud normalization, accordion by category, RTL table) — `10ea949`
 - [ ] 01-05-PLAN.md — Selector de sesión screen (chips, filters, direction, quantity, remember last selection)
 
 **Success criteria:**

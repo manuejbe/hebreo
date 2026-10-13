@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing
-last_updated: "2026-10-13T13:57:00Z"
+last_updated: "2026-10-13T14:11:00Z"
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 4
 ---
 
 # State: Ivrit
@@ -18,20 +18,22 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-10-12)
 
 **Core value:** El progreso Leitner que hace que el usuario vuelva a estudiar todos los días
-**Current focus:** Phase 1 — Base (Plan 01 completo, Plan 02 siguiente)
+**Current focus:** Phase 1 — Base (Plan 04 completo, Plan 05 siguiente)
 
 ## Current Phase
 
 **Phase 1: Base**
 Goal: La app carga y normaliza vocab.json, el router funciona, el layout mobile/dark es correcto, la pantalla Inicio muestra el resumen real, el Diccionario busca y el Selector de sesión configura una sesión.
 
-Status: Executing — 2/5 planes completados (2026-10-13)
+Status: Executing — 4/5 planes completados (2026-10-13)
 
 **Completed plans:**
 - Plan 01: HTML Shell + CSS Design System — `13f76f8`
 - Plan 02: Data loading y normalización de vocab.json — `c84e27a`
+- Plan 03: Router + pantallas base — `0f773b2`
+- Plan 04: Diccionario — `10ea949`
 
-**Next:** Plan 03 — Router + pantallas base
+**Next:** Plan 05 — Selector de Sesión
 
 ## Phase History
 
@@ -52,6 +54,14 @@ None.
 - HEADER_MAP, detectKind, slugify en scope global (no locales a normalize) — reutilizables en sync logic de Plan 04
 - normalize() es función pura sin side-effects — testeable de forma aislada
 - Caché: cache.updated >= raw.updated usa comparación lexicográfica de strings ISO 8601 UTC (correcta por definición)
+- Router allowlist: rutas desconocidas caen a renderInicio — hash nunca se ejecuta como código
+- renderDiccionario/renderSesion declarados como stubs — el router los llama con la interfaz correcta ya
+- Fallback setTimeout(250ms) en page-leave: animationend no dispara con prefers-reduced-motion:reduce
+- Media query del grid de modos inyectada con id guard (inicio-grid-style) — no poluciona el CSS global
+- normalizeSearch global (no closure): reutilizable en sesión y sync futuros
+- <details>/<summary> para acordeones Diccionario — nativo, accesible, sin JS de toggle
+- XSS T-04-01: span.textContent = query; safe.innerHTML — una línea, correcto para todos los chars HTML
+- heFields Set incluye 'group': en categoría Countries el campo región es texto hebreo
 
 ## Key Context for Next Phase
 
@@ -63,6 +73,13 @@ None.
 - `Store` helper disponible con `get/set/remove` wrapeados en try/catch
 - Caché de vocab en `ivrit.v1.vocabCache` con campo `updated` para invalidación por fecha ISO
 - `.screen` / `.screen.active` CSS ya presentes — Plan 03 solo necesita implementar el router
+- `App.router` implementado con allowlist de rutas, hashchange, page-leave/page-enter transiciones
+- `App.ui.renderInicio` completo con stats reales, grilla 10 modos (todos grises), barras por categoría
+- `App.ui.renderDiccionario` implementado: 17 acordeones, búsqueda normalizada, RTL, box-chips — Plan 04 completo
+- `App.ui.renderSesion` declarado como stub — listo para Plan 05
+- `normalizeSearch()` en scope global — strips niqqud hebreo + acentos españoles, lowercase/trim
+- `App.ui._dictUpdate(query)` expuesto para el oninput handler del input de búsqueda
+- `APPS_SCRIPT_URL` disponible en scope global del script
 
 ## Performance Metrics
 
@@ -70,7 +87,9 @@ None.
 |-------|------|----------|-------|-------|
 | 01-base | 01 | 3min | 1 | 1 |
 | 01-base | 02 | 5min | 2 | 1 |
+| 01-base | 03 | 8min | 2 | 1 |
+| 01-base | 04 | 6min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T13:57:00Z — Completed 01-02-PLAN.md*
-*Stopped at: Plan 03 (router + pantallas base)*
+*Last session: 2026-10-13T14:11:00Z — Completed 01-04-PLAN.md*
+*Stopped at: Plan 05 (selector de sesión)*
