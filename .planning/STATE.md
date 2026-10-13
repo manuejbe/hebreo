@@ -19,7 +19,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-10-13)
 
 **Core value:** El progreso Leitner que hace que el usuario vuelva a estudiar todos los días
-**Current focus:** Phase 4 — Unir con flechas (próxima fase).
+**Current focus:** Phase 5 — Progreso Leitner (próxima fase).
 
 ## Current Phase
 
