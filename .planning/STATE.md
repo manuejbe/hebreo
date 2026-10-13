@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing
-last_updated: "2026-10-13T14:20:00Z"
+status: Ready to execute
+last_updated: "2026-10-13T15:00:00Z"
 progress:
   total_phases: 10
   completed_phases: 1
-  total_plans: 5
+  total_plans: 7
   completed_plans: 5
 ---
 
@@ -18,23 +18,18 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-10-12)
 
 **Core value:** El progreso Leitner que hace que el usuario vuelva a estudiar todos los días
-**Current focus:** Phase 1 — Base COMPLETA. Próximo: Phase 2.
+**Current focus:** Phase 2 — Sincronización (planificada, lista para ejecutar).
 
 ## Current Phase
 
-**Phase 1: Base — COMPLETA**
-Goal: La app carga y normaliza vocab.json, el router funciona, el layout mobile/dark es correcto, la pantalla Inicio muestra el resumen real, el Diccionario busca y el Selector de sesión configura una sesión.
+**Phase 2: Sincronización — Ready to execute**
+Goal: El botón Sincronizar descarga el vocab desde Google Docs, compara con el actual, muestra el diff y actualiza la caché sin perder progreso.
 
-Status: Completed — 5/5 planes completados (2026-10-13)
+Status: Planned — 2 planes, 2 waves (2026-10-13)
 
-**Completed plans:**
-- Plan 01: HTML Shell + CSS Design System — `13f76f8`
-- Plan 02: Data loading y normalización de vocab.json — `c84e27a`
-- Plan 03: Router + pantallas base — `0f773b2`
-- Plan 04: Diccionario — `10ea949`
-- Plan 05: Selector de Sesión — `1625162`
-
-**Next:** Phase 2 — (por planificar)
+**Plans:**
+- Plan 01: App.sync module (fetchWithTimeout, validateRaw, diffVocab, applyDiff, run) — Wave 1
+- Plan 02: Sync UI (spinner button, result panel, error toasts, wire renderInicio) — Wave 2
 
 ## Phase History
 
@@ -91,5 +86,5 @@ None.
 | 01-base | 05 | 4min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T14:20:00Z — Completed 01-05-PLAN.md (Phase 1 Base COMPLETA)*
-*Stopped at: Phase 2 (por planificar)*
+*Last session: 2026-10-13T15:00:00Z — Phase 2 Sincronización planned (2 plans, verified)*
+*Next: /gsd-execute-phase 2*
