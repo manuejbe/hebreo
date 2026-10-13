@@ -1009,7 +1009,8 @@
         index: 0,
         direction: st.direction,
         results: [],   // { wordId, correct: bool }
-        _matchVariant: App.session._matchVariant  // preserve for renderUnir (D-05/WR-01)
+        _matchVariant: App.session._matchVariant,  // preserve for renderUnir (D-05/WR-01)
+        _pendingMode:  mode
       };
       App.session.start = startFn;  // re-attach so subsequent calls still work
     };
@@ -4224,10 +4225,19 @@
         el2.classList.toggle('active', active);
       });
 
+      const gameRoutes = ['tarjetas','opcion-multiple','unir','completar','concordancia','escribir','clasificar','contrarreloj','repaso-dia','repaso-errores'];
       if (renderers[parsed.route]) {
         renderers[parsed.route]();
       } else {
         App.ui.renderInicio(screenEl);
+      }
+      if (gameRoutes.includes(parsed.route)) {
+        const backBtn = document.createElement('button');
+        backBtn.style.cssText = 'display:flex;align-items:center;gap:6px;padding:var(--sp-3) var(--sp-4);background:none;border:none;color:var(--text-secondary);font:600 var(--text-sm) var(--font-body);cursor:pointer;';
+        backBtn.setAttribute('aria-label', 'Volver a sesión');
+        backBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Sesión';
+        backBtn.addEventListener('click', () => { location.hash = '#/sesion'; });
+        screenEl.insertBefore(backBtn, screenEl.firstChild);
       }
       main.appendChild(screenEl);
     };
