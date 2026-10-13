@@ -983,6 +983,16 @@
       } else if (st.filter === 'hoy') {
         words = words.filter(w => { const p = App.state.progress[w.id]; return p && p.box > 0 && p.due <= now; });
       }
+      // Filtrar por variante para modo unir (D-05)
+      if (mode === 'unir') {
+        const variant = App.session._matchVariant || 'es-he';
+        if (variant === 'sg-pl') {
+          words = words.filter(w => w.mpl && w.mpl !== w.msg);
+        } else if (variant === 'masc-fem') {
+          words = words.filter(w => w.kind === 'gendered');
+        }
+        // 'es-he' no requiere filtro adicional
+      }
       // Shuffle (Fisher-Yates)
       for (let i = words.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
