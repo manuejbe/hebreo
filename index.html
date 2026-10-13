@@ -1937,21 +1937,69 @@
       const onResize = () => redrawLines();
       window.addEventListener('resize', onResize);
 
+      function evaluatePair(leftEl, leftWordId, rightEl, rightWordId) {
+        const isCorrect = leftWordId === rightWordId;
+        const color     = isCorrect ? 'var(--green)' : 'var(--red)';
+        const lineEl    = drawLine(leftEl, rightEl, color);
+        if (isCorrect) {
+          [leftEl, rightEl].forEach(e => {
+            e.style.opacity       = '0.45';
+            e.style.borderColor   = 'var(--green)';
+            e.style.background    = 'var(--green-bg)';
+            e.dataset.resolved    = 'true';
+            e.style.pointerEvents = 'none';
+            e.style.animation     = 'flash-green 350ms ease-out';
+            e.addEventListener('animationend', () => { e.style.animation = ''; }, { once: true });
+          });
+          resolvedPairs[leftWordId] = { leftEl, rightEl, color: 'var(--green)' };
+          lines[leftWordId] = lineEl;
+          if (!variant || variant === 'es-he') App.ui.updateProgress(leftWordId, true);
+          App.session.results.push({ wordId: leftWordId, correct: true });
+          resolved++;
+          selectedLeft = null; selectedRight = null;
+          if (resolved >= pairs.length) showRoundSummary();
+        } else {
+          roundErrors++;
+          [leftEl, rightEl].forEach(e => {
+            e.style.borderColor = 'var(--red)';
+            e.style.background  = 'var(--red-bg)';
+            e.style.animation   = 'shake 400ms ease-out';
+          });
+          if (!variant || variant === 'es-he') App.ui.updateProgress(leftWordId, false);
+          App.session.results.push({ wordId: leftWordId, correct: false });
+          pendingLine = { leftEl, rightEl, line: lineEl, color: 'var(--red)' };
+          selectedLeft = null; selectedRight = null;
+          setTimeout(() => {
+            [leftEl, rightEl].forEach(e => {
+              e.style.borderColor = 'var(--border)';
+              e.style.background  = 'var(--surface)';
+              e.style.animation   = '';
+            });
+            if (lineEl.parentNode) lineEl.parentNode.removeChild(lineEl);
+            pendingLine = null;
+          }, 450);
+        }
+      }
+
       function handleTap(clickedEl) {
         const wordId = clickedEl.dataset.wordId;
         const side   = clickedEl.dataset.side;
-
         if (clickedEl.dataset.resolved === 'true') return;
 
         if (side === 'left') {
+          if (selectedRight) {
+            // Right was selected first — evaluate pair right→left
+            const r = selectedRight;
+            selectedRight = null;
+            evaluatePair(clickedEl, wordId, r.el, r.wordId);
+            return;
+          }
           if (selectedLeft && selectedLeft.el === clickedEl) {
-            // Deselect same element (D-02)
             clickedEl.style.borderColor = 'var(--border)';
             clickedEl.style.background  = 'var(--surface)';
             selectedLeft = null;
             return;
           }
-          // Change left selection (D-02)
           if (selectedLeft) {
             selectedLeft.el.style.borderColor = 'var(--border)';
             selectedLeft.el.style.background  = 'var(--surface)';
@@ -1960,81 +2008,19 @@
           clickedEl.style.borderColor = 'var(--blue-700)';
           clickedEl.style.background  = 'var(--blue-50, #EFF6FF)';
         } else {
-          // side === 'right'
-          if (!selectedLeft) {
-            // No left selected — handle right-only selection/deselect
-            if (selectedRight && selectedRight.el === clickedEl) {
-              clickedEl.style.borderColor = 'var(--border)';
-              clickedEl.style.background  = 'var(--surface)';
-              selectedRight = null;
-            } else {
-              if (selectedRight) { selectedRight.el.style.borderColor = 'var(--border)'; selectedRight.el.style.background = 'var(--surface)'; }
-              selectedRight = { el: clickedEl, wordId };
-              clickedEl.style.borderColor = 'var(--blue-700)';
-              clickedEl.style.background  = 'var(--blue-50, #EFF6FF)';
-            }
+          if (selectedLeft) {
+            evaluatePair(selectedLeft.el, selectedLeft.wordId, clickedEl, wordId);
             return;
           }
-
-          // Evaluate pair
-          const isCorrect = selectedLeft.wordId === wordId;
-          const color     = isCorrect ? 'var(--green)' : 'var(--red)';
-          const lineEl    = drawLine(selectedLeft.el, clickedEl, color);
-
-          if (isCorrect) {
-            [selectedLeft.el, clickedEl].forEach(e => {
-              e.style.opacity       = '0.45';
-              e.style.borderColor   = 'var(--green)';
-              e.style.background    = 'var(--green-bg)';
-              e.dataset.resolved    = 'true';
-              e.style.pointerEvents = 'none';
-              e.style.animation     = 'flash-green 350ms ease-out';
-              e.addEventListener('animationend', () => { e.style.animation = ''; }, { once: true });
-            });
-            resolvedPairs[selectedLeft.wordId] = { leftEl: selectedLeft.el, rightEl: clickedEl, color: 'var(--green)' };
-            lines[selectedLeft.wordId] = lineEl;
-
-            // Leitner: solo ES↔HE (D-10)
-            if (!variant || variant === 'es-he') {
-              App.ui.updateProgress(selectedLeft.wordId, true);
-            }
-            App.session.results.push({ wordId: selectedLeft.wordId, correct: true });
-
-            resolved++;
-            selectedLeft  = null;
+          if (selectedRight && selectedRight.el === clickedEl) {
+            clickedEl.style.borderColor = 'var(--border)';
+            clickedEl.style.background  = 'var(--surface)';
             selectedRight = null;
-
-            if (resolved >= pairs.length) showRoundSummary();
           } else {
-            // Incorrect: shake 400ms + red, then reset
-            roundErrors++;
-            [selectedLeft.el, clickedEl].forEach(e => {
-              e.style.borderColor = 'var(--red)';
-              e.style.background  = 'var(--red-bg)';
-              e.style.animation   = 'shake 400ms ease-out';
-            });
-
-            // Leitner: solo ES↔HE (D-10/D-11)
-            if (!variant || variant === 'es-he') {
-              App.ui.updateProgress(selectedLeft.wordId, false);
-            }
-            App.session.results.push({ wordId: selectedLeft.wordId, correct: false });
-
-            const capturedLeft  = selectedLeft;
-            const capturedRight = { el: clickedEl, wordId };
-            pendingLine = { leftEl: capturedLeft.el, rightEl: clickedEl, line: lineEl, color: 'var(--red)' };
-            selectedLeft  = null;
-            selectedRight = null;
-
-            setTimeout(() => {
-              [capturedLeft.el, capturedRight.el].forEach(e => {
-                e.style.borderColor = 'var(--border)';
-                e.style.background  = 'var(--surface)';
-                e.style.animation   = '';
-              });
-              if (lineEl.parentNode) lineEl.parentNode.removeChild(lineEl);
-              pendingLine = null;
-            }, 450);  // 400ms shake + 50ms buffer
+            if (selectedRight) { selectedRight.el.style.borderColor = 'var(--border)'; selectedRight.el.style.background = 'var(--surface)'; }
+            selectedRight = { el: clickedEl, wordId };
+            clickedEl.style.borderColor = 'var(--blue-700)';
+            clickedEl.style.background  = 'var(--blue-50, #EFF6FF)';
           }
         }
       }
