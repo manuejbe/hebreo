@@ -536,9 +536,8 @@
 
     App.init = async function() {
       App.ui.initTheme();
-      // App.data.load() — añadido en Plan 02
+      await App.data.load();
       // App.router.init() — añadido en Plan 03
-      // renderInicio()    — añadido en Plan 03
     };
 
 
@@ -622,7 +621,149 @@
     };
 
 
-    /* === 5. ARRANQUE === */
+    /* === 5. DATOS: NORMALIZACIÓN Y CARGA === */
+
+    /**
+     * Mapeo encabezado hebreo → campo normalizado (SPEC §2.2).
+     * Por texto, no por posición.
+     */
+    const HEADER_MAP = {
+      'תרגום': 'es',
+      'יחיד':  'msg',
+      'רבים':  'mpl',
+      'יחידה': 'fsg',
+      'רבות':  'fpl',
+      'פועל':  'msg',   // verbo infinitivo → msg
+      'ביטוי': 'msg',   // expresión → msg
+      'מדינה': 'msg',   // nombre de país → msg
+      'אזור':  'group', // región (país)
+      'תחום':  'group', // área (profesión)
+    };
+
+    /** Convierte una categoría en su kind según los encabezados (SPEC §2.3). */
+    function detectKind(headerSet) {
+      if (headerSet.has('פועל'))  return 'verb';
+      if (headerSet.has('ביטוי')) return 'expr';
+      if (headerSet.has('מדינה')) return 'country';
+      if (headerSet.has('יחידה') || headerSet.has('רבות')) return 'gendered';
+      return 'noun';
+    }
+
+    /** Convierte string a slug URL-safe (sin acentos, lowercase, guiones). */
+    function slugify(str) {
+      return String(str).normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    /**
+     * Normaliza el JSON crudo de vocab.json → array de word objects (SPEC §2.2–2.4).
+     * Función pura: no toca App.state.
+     * @param {object} rawData — objeto con .categories[]
+     * @returns {Array} words[]
+     */
+    App.data.normalize = function(rawData) {
+      // Fusionar categorías con el mismo nombre (SPEC §2.1)
+      const merged = [];
+      const catIdx = {};
+      for (const cat of rawData.categories) {
+        if (catIdx[cat.name] !== undefined) {
+          merged[catIdx[cat.name]].rows.push(...cat.rows);
+        } else {
+          catIdx[cat.name] = merged.length;
+          merged.push({ name: cat.name, headers: cat.headers, rows: [...cat.rows] });
+        }
+      }
+
+      const words = [];
+      for (const cat of merged) {
+        const catSlug  = slugify(cat.name);
+        const headerSet = new Set(cat.headers);
+        const kind      = detectKind(headerSet);
+        const seenBase  = {};  // baseId → true, para detectar duplicados
+
+        for (const row of cat.rows) {
+          const word = {
+            id: '', cat: cat.name, kind,
+            es: '', msg: null, mpl: null, fsg: null, fpl: null, group: null, extra: {}
+          };
+
+          for (let i = 0; i < cat.headers.length; i++) {
+            const header = cat.headers[i];
+            const raw    = row[i];
+            // "—" o vacío → null (SPEC §2.4)
+            const val = (raw === '—' || raw === undefined || raw === null || String(raw).trim() === '')
+              ? null : String(raw).trim();
+            const field = HEADER_MAP[header];
+            if (field) {
+              word[field] = val;
+            } else {
+              word.extra[header] = val;
+            }
+          }
+
+          // ID estable: slug(cat)::slug(es) [+ ::slug(msg) si hay duplicado] (SPEC §2.4)
+          const baseId = catSlug + '::' + slugify(word.es || '');
+          if (seenBase[baseId]) {
+            word.id = baseId + '::' + slugify(word.msg || '');
+          } else {
+            word.id    = baseId;
+            seenBase[baseId] = true;
+          }
+
+          words.push(word);
+        }
+      }
+      return words;
+    };
+
+    /**
+     * Carga vocab.json (o caché de localStorage si es más nueva),
+     * normaliza y puebla App.state.vocab. (SPEC §3)
+     */
+    App.data.load = async function() {
+      let raw = null;
+
+      try {
+        const resp = await fetch('./vocab.json');
+        if (resp.ok) raw = await resp.json();
+      } catch (_) { /* sin red / file:// — caerá a caché */ }
+
+      const cache = Store.get('ivrit.v1.vocabCache');
+
+      if (raw && cache && cache.updated && raw.updated && cache.updated >= raw.updated) {
+        // Caché más nueva o igual → usar caché
+        raw = cache.raw;
+      } else if (raw) {
+        // Archivo más nuevo → actualizar caché
+        Store.set('ivrit.v1.vocabCache', { raw, updated: raw.updated || new Date().toISOString() });
+      } else if (cache && cache.raw) {
+        // Fetch falló, usar caché
+        App.ui.showToast('Usando vocabulario guardado en caché');
+        raw = cache.raw;
+      } else {
+        // Todo falló
+        App.ui.showToast('No se pudo cargar el vocabulario');
+        App.state.vocab = [];
+        return;
+      }
+
+      try {
+        App.state.vocab = App.data.normalize(raw);
+      } catch (_) {
+        App.ui.showToast('Error al procesar el vocabulario');
+        App.state.vocab = [];
+        return;
+      }
+
+      // Restaurar progreso y settings persistidos
+      App.state.progress = Store.get('ivrit.v1.progress') || {};
+      App.state.stats    = Store.get('ivrit.v1.stats')    || {};
+      const saved = Store.get('ivrit.v1.settings') || {};
+      Object.assign(App.state.settings, saved);
+    };
+
+
+    /* === 6. ARRANQUE === */
 
     document.addEventListener('DOMContentLoaded', () => App.init());
   </script>
