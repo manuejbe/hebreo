@@ -13,7 +13,7 @@
 |---|-------|------|--------------|--------|
 | 1 | Base | App cargando datos reales con Inicio, Diccionario y navegación completa | DATA-01..06, ROUT-01, STAT-01..02, LAYO-01..06, INIC-01..05, DICT-01..03, SESI-01..05 | Completed (5/5) |
 | 2 | Sincronización | El botón Sincronizar actualiza el vocab desde Google Docs con diff | SYNC-01..05 | Completed (2/2) |
-| 3 | Tarjetas y MCQ | Dos modos de estudio funcionales actualizando progreso | FLAS-01..06, MCQ-01..04 | Pending |
+| 3 | Tarjetas y MCQ | Dos modos de estudio funcionales actualizando progreso | FLAS-01..06, MCQ-01..04 | Completed (3/3) |
 | 4 | Unir con flechas | Modo de matching con líneas SVG y drag/touch | MATC-01..06 | Pending |
 | 5 | Progreso Leitner | Repetición espaciada completa, Repaso del día, Estadísticas | LEIT-01..05, RERR-01..02, ESTA-01..03 | Pending |
 | 6 | Teclado y Escribir | Teclado hebreo en pantalla + modos de escritura | TECL-01..04, WRIT-01..05, COMP-01, CONC-01..02 | Pending |
@@ -80,8 +80,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — App.sync module: fetchWithTimeout (20s), validateRaw, diffVocab, applyDiff, run
-- [ ] 02-02-PLAN.md — Sync UI: spinner button, result panel with new-word list, error toasts, wire renderInicio
+- [x] 02-01-PLAN.md — App.sync module: fetchWithTimeout (20s), validateRaw, diffVocab, applyDiff, run
+- [x] 02-02-PLAN.md — Sync UI: spinner button, result panel with new-word list, error toasts, wire renderInicio
 
 ---
 

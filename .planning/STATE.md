@@ -2,36 +2,39 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing
-last_updated: "2026-10-13T16:30:00Z"
+status: in_progress
+last_updated: "2026-10-13T18:35:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 3
+  total_plans: 13
+  completed_plans: 10
+  percent: 77
 ---
 
 # State: Ivrit
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-10-12)
+See: `.planning/PROJECT.md` (updated 2026-10-13)
 
 **Core value:** El progreso Leitner que hace que el usuario vuelva a estudiar todos los días
-**Current focus:** Phase 3 — Tarjetas y MCQ (próxima fase).
+**Current focus:** Phase 4 — Unir con flechas (próxima fase).
 
 ## Current Phase
 
-**Phase 2: Sincronización — COMPLETA**
-Goal: El botón Sincronizar descarga el vocab desde Google Docs, compara con el actual, muestra el diff y actualiza la caché sin perder progreso.
+**Phase 3: Tarjetas y MCQ — COMPLETA**
+Goal: Dos modos de estudio completos que el usuario puede jugar de principio a fin y que actualizan el progreso en localStorage.
 
-Status: Completed — 2/2 planes completados (2026-10-13)
+Status: Completed — 3/3 planes completados (2026-10-13)
 
 **Completed plans:**
-- Plan 01: App.sync module (fetchWithTimeout, validateRaw, diffVocab, applyDiff, run) — `3dfcaf6`
-- Plan 02: Sync UI (spinner, result panel, error toasts, live date update) — `f113cd6`
 
-**Next:** Phase 3 — Tarjetas y MCQ
+- Plan 01: Session engine + Leitner (App.session, updateProgress, renderResultado, router wiring) — `7f076d4`
+- Plan 02: Tarjetas screen (flip 3D, swipe, keyboard, dorso por kind, barra de progreso) — `42151f6`
+- Plan 03: MCQ screen (getDistractors, grid 2×2, feedback animado, teclado 1-4+Enter) — `32b61bc`
+
+**Next:** Phase 4 — Unir con flechas
 
 ## Phase History
 
@@ -39,6 +42,7 @@ Status: Completed — 2/2 planes completados (2026-10-13)
 |-------|--------|-----------|
 | Phase 1: Base | Completed | 2026-10-13 |
 | Phase 2: Sincronización | Completed | 2026-10-13 |
+| Phase 3: Tarjetas y MCQ | Completed | 2026-10-13 |
 
 ## Active Blockers
 
@@ -67,16 +71,16 @@ None.
 
 ## Key Context for Next Phase
 
-- `index.html` completo con todo el CSS base, App scaffold, data loading, router, Inicio, Diccionario y Sesión
-- `App.state.vocab[]` poblado con ~735 word objects normalizados al arrancar
-- `App.state.progress{}`, `App.state.stats{}` restaurados desde localStorage en `App.data.load()`
-- `App.ui.renderSesion()` implementado: 17 chips de categoría, 4 filtros, 3 direcciones, 4 cantidades
-- `App.ui._sesionState` expuesto: `{ cats, filter, direction, quantity }` — fases siguientes lo leen para configurar modos
-- `ivrit.v1.settings.lastSession` en localStorage: persistencia cross-session desde Phase 1
-- `getMatchingWords()` logic disponible en renderSesion: todas/nuevas/dificiles/hoy
-- `normalizeSearch()` en scope global — strips niqqud hebreo + acentos españoles, lowercase/trim
-- `Store` helper disponible con `get/set/remove` wrapeados en try/catch
-- `APPS_SCRIPT_URL` disponible en scope global del script
+- `App.session` objeto completo: `{ mode, words[], index, direction, results[], _pendingMode, _cardDir }`
+- `App.session.start(mode)` — filtra vocab, Fisher-Yates shuffle, slices a quantity; re-attachea `start` fn
+- `App.ui.updateProgress(wordId, correct)` — Leitner: correct→box min+1,5; wrong→box=1; persiste via Store
+- `App.ui.renderResultado(el)` — pantalla de resultado con pct, lista de errores, botón "Repetir"
+- `App.ui.renderTarjetas(el)` — tarjetas completas: flip 3D, swipe, keyboard, buildBack() por kind
+- `App.ui.renderOpcionMultiple(el)` — MCQ completo: getDistractors, grid 2×2, handleAnswer, onKey
+- `getDistractors(correct, dir)` — función global: usedTexts Set, pickN shuffle, prioridad kind+cat+region
+- Botón "Mostrar respuesta" pre-flip; "✗ No la sabía / ✓ La sabía" post-flip (fix UAT 2026-10-13)
+- Router renderers map cubre: tarjetas, opcion-multiple, resultado (no stubs)
+- `App.state.progress{}` en localStorage `ivrit.v1.progress`: box 0-5, lastWrong timestamp
 
 ## Performance Metrics
 
@@ -89,5 +93,5 @@ None.
 | 01-base | 05 | 4min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T16:30:00Z — Phase 2 Sincronización COMPLETA (2/2 planes, UAT aprobado)*
-*Next: Phase 3 — Tarjetas y MCQ*
+*Last session: 2026-10-13T18:35:00Z — Phase 3 Tarjetas y MCQ COMPLETA (3/3 planes, UAT aprobado + fix mostrar-respuesta)*
+*Next: Phase 4 — Unir con flechas*
