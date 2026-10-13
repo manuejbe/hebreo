@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es" dir="ltr" data-theme="auto" data-he-size="normal">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Estudia vocabulario hebreo con repetición espaciada">
+  <title>Ivrit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Nunito:wght@400;600;700&family=Heebo:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* === 1. CSS VARIABLES (DESIGN.md §1) === */
+
+    :root {
+      /* Fondos y superficies */
+      --bg:              #F7F3EC;
+      --surface:         #FFFFFF;
+      --surface-raised:  #FFFEF9;
+      --surface-hover:   #F0EBE0;
+
+      /* Azul israelí — escala completa */
+      --blue-900: #002D6B;
+      --blue-800: #003F8F;
+      --blue-700: #0052B4;
+      --blue-600: #1467C8;
+      --blue-500: #3382D8;
+      --blue-200: #A8C8F0;
+      --blue-100: #D6E8FF;
+      --blue-50:  #EEF5FF;
+
+      /* Texto */
+      --text-primary:    #1A1814;
+      --text-secondary:  #5A5347;
+      --text-muted:      #9E9489;
+      --text-on-primary: #FFFFFF;
+
+      /* Acento: oro mediterráneo */
+      --gold:       #C87A0A;
+      --gold-light: #F5C842;
+
+      /* Feedback */
+      --green:        #1A7A42;
+      --green-light:  #DCFCE7;
+      --green-bg:     #F0FBF4;
+      --red:          #C42B2B;
+      --red-light:    #FFE4E4;
+      --red-bg:       #FFF5F5;
+      --amber:        #C25A00;
+      --amber-light:  #FFECD4;
+      --amber-bg:     #FFF8F0;
+
+      /* Bordes y sombras */
+      --border:       #E2D9CC;
+      --border-focus: var(--blue-700);
+      --shadow-sm:    0 1px 3px rgba(26,24,20,.08), 0 1px 2px rgba(26,24,20,.04);
+      --shadow-md:    0 4px 12px rgba(26,24,20,.10), 0 2px 6px rgba(26,24,20,.06);
+      --shadow-lg:    0 8px 24px rgba(26,24,20,.12), 0 4px 12px rgba(26,24,20,.08);
+      --shadow-flip:  0 16px 40px rgba(26,24,20,.18);
+
+      /* Tipografía */
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body:    'Nunito', 'Helvetica Neue', sans-serif;
+      --font-hebrew:  'Heebo', 'Arial Hebrew', sans-serif;
+
+      /* Radio de borde */
+      --radius-sm:   6px;
+      --radius-md:   12px;
+      --radius-lg:   18px;
+      --radius-xl:   24px;
+      --radius-pill: 999px;
+
+      /* Espaciado (base 4px) */
+      --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+      --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+
+      /* Animaciones */
+      --dur-fast:  150ms;
+      --dur-base:  250ms;
+      --dur-slow:  400ms;
+      --ease-out:  cubic-bezier(.22,.68,0,1.2);
+      --ease-flip: cubic-bezier(.45,0,.55,1);
+
+      /* Escala de texto */
+      --text-xs:      0.75rem;
+      --text-sm:      0.875rem;
+      --text-base:    1rem;
+      --text-lg:      1.125rem;
+      --text-xl:      1.25rem;
+      --text-2xl:     1.5rem;
+      --text-3xl:     1.875rem;
+      --text-4xl:     2.25rem;
+      --text-display: 3rem;
+
+      /* Escala hebreo */
+      --he-scale: 1.25;
+    }
+
+    /* Tema oscuro: media query automático (no anula si data-theme="light") */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg:             #0D1520;
+        --surface:        #152030;
+        --surface-raised: #1C2A3E;
+        --surface-hover:  #1F3048;
+
+        --text-primary:   #EDE6D8;
+        --text-secondary: #A09880;
+        --text-muted:     #6A614F;
+
+        --border:      #2A3D55;
+        --shadow-sm:   0 1px 3px rgba(0,0,0,.30);
+        --shadow-md:   0 4px 12px rgba(0,0,0,.40);
+        --shadow-lg:   0 8px 24px rgba(0,0,0,.50);
+        --shadow-flip: 0 16px 40px rgba(0,0,0,.60);
+
+        --green-bg:  #0A2A18;
+        --red-bg:    #2A0A0A;
+        --amber-bg:  #2A1800;
+        --blue-50:   #0A1828;
+        --blue-100:  #102040;
+      }
+    }
+
+    /* Tema oscuro explícito (data-theme="dark") */
+    [data-theme="dark"] {
+      --bg:             #0D1520;
+      --surface:        #152030;
+      --surface-raised: #1C2A3E;
+      --surface-hover:  #1F3048;
+
+      --text-primary:   #EDE6D8;
+      --text-secondary: #A09880;
+      --text-muted:     #6A614F;
+
+      --border:      #2A3D55;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.30);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.40);
+      --shadow-lg:   0 8px 24px rgba(0,0,0,.50);
+      --shadow-flip: 0 16px 40px rgba(0,0,0,.60);
+
+      --green-bg:  #0A2A18;
+      --red-bg:    #2A0A0A;
+      --amber-bg:  #2A1800;
+      --blue-50:   #0A1828;
+      --blue-100:  #102040;
+    }
+
+    /* Tema claro explícito — fuerza light incluso si OS es oscuro */
+    [data-theme="light"] {
+      --bg:             #F7F3EC;
+      --surface:        #FFFFFF;
+      --surface-raised: #FFFEF9;
+      --surface-hover:  #F0EBE0;
+
+      --text-primary:   #1A1814;
+      --text-secondary: #5A5347;
+      --text-muted:     #9E9489;
+
+      --border:      #E2D9CC;
+      --shadow-sm:   0 1px 3px rgba(26,24,20,.08), 0 1px 2px rgba(26,24,20,.04);
+      --shadow-md:   0 4px 12px rgba(26,24,20,.10), 0 2px 6px rgba(26,24,20,.06);
+      --shadow-lg:   0 8px 24px rgba(26,24,20,.12), 0 4px 12px rgba(26,24,20,.08);
+      --shadow-flip: 0 16px 40px rgba(26,24,20,.18);
+
+      --green-bg:  #F0FBF4;
+      --red-bg:    #FFF5F5;
+      --amber-bg:  #FFF8F0;
+      --blue-50:   #EEF5FF;
+      --blue-100:  #D6E8FF;
+    }
+
+    /* Tamaños de hebreo configurables */
+    :root[data-he-size="normal"]    { --he-scale: 1.25; }
+    :root[data-he-size="grande"]    { --he-scale: 1.50; }
+    :root[data-he-size="muy-grande"]{ --he-scale: 1.75; }
+
+
+    /* === 2. RESET & BASE === */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      color: var(--text-primary);
+      background: var(--bg);
+      min-height: 100vh;
+      min-width: 360px;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    img, svg { display: block; }
+
+
+    /* === 3. TIPOGRAFÍA === */
+
+    /* Clase base para hebreo (DESIGN.md §2.3) */
+    .he {
+      font-family: var(--font-hebrew);
+      font-size: calc(var(--he-scale) * 1em);
+      direction: rtl;
+      unicode-bidi: isolate;
+      text-align: right;
+    }
+
+    /* Estilos tipográficos semánticos */
+    .text-display {
+      font-family: var(--font-display);
+      font-size: var(--text-display);
+      font-weight: 600;
+      line-height: 1.1;
+    }
+    .text-heading {
+      font-family: var(--font-display);
+      font-size: 1.375rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .text-body {
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      font-weight: 400;
+    }
+    .text-label {
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .text-micro {
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      font-weight: 400;
+    }
+    .text-nav {
+      font-family: var(--font-body);
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+    .text-muted { color: var(--text-muted); }
+    .text-secondary { color: var(--text-secondary); }
+
+
+    /* === 4. LAYOUT === */
+
+    .app-main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: var(--sp-4);
+      padding-bottom: calc(56px + env(safe-area-inset-bottom) + var(--sp-4));
+      min-height: 100vh;
+    }
+    @media (min-width: 600px) {
+      .app-main { padding: var(--sp-6); padding-bottom: calc(56px + env(safe-area-inset-bottom) + var(--sp-6)); }
+    }
+
+    /* Pantallas: ocultas por defecto, activas cuando router las muestra */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+
+    /* === 5. BARRA INFERIOR (DESIGN.md §3.4) === */
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(56px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: stretch;
+      z-index: 100;
+    }
+    [data-theme="dark"] .bottom-nav {
+      background: rgba(21,32,48,.92);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .bottom-nav {
+        background: rgba(21,32,48,.92);
+      }
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-width: 44px;
+      min-height: 44px;
+      color: var(--text-muted);
+      font: 600 0.6875rem var(--font-body);
+      position: relative;
+      transition: color var(--dur-fast);
+    }
+    /* Dot indicator (DESIGN.md §3.4) */
+    .nav-item::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--blue-700);
+      transition: width 200ms ease;
+    }
+    .nav-item.active { color: var(--blue-700); }
+    .nav-item.active::after { width: 4px; }
+    .nav-item:hover { color: var(--text-secondary); }
+    .nav-item svg { flex-shrink: 0; }
+
+
+    /* === 6. CHIPS DE CAJA LEITNER (DESIGN.md §3.8) === */
+
+    .box-chip {
+      border-radius: var(--radius-sm);
+      padding: 2px 7px;
+      font: 600 var(--text-xs) var(--font-body);
+      display: inline-block;
+    }
+    .box-chip[data-box="0"] { background: var(--border);      color: var(--text-muted); }
+    .box-chip[data-box="1"] { background: #FFE4E4;             color: var(--red); }
+    .box-chip[data-box="2"] { background: var(--amber-light);  color: var(--amber); }
+    .box-chip[data-box="3"] { background: var(--blue-100);     color: var(--blue-700); }
+    .box-chip[data-box="4"] { background: var(--green-light);  color: var(--green); }
+    .box-chip[data-box="5"] { background: var(--gold-light);   color: var(--gold); }
+
+
+    /* === 7. TOAST (DESIGN.md §3.9) === */
+
+    #toast-container {
+      position: fixed;
+      bottom: calc(64px + env(safe-area-inset-bottom) + var(--sp-3));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+      align-items: center;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: var(--sp-3) var(--sp-5);
+      max-width: 360px;
+      white-space: nowrap;
+      pointer-events: auto;
+      animation: toast-in 250ms var(--ease-out) both;
+    }
+    .toast.out { animation: toast-out 200ms ease-in forwards; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+    @keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
+
+
+    /* === 8. TRANSICIONES DE PANTALLA (DESIGN.md §4) === */
+
+    .page-leave { animation: page-out 200ms ease-in forwards; }
+    .page-enter { animation: page-in 250ms var(--ease-out) 80ms both; }
+    @keyframes page-out { to { opacity: 0; transform: translateY(-6px); } }
+    @keyframes page-in  { from { opacity: 0; transform: translateY(10px); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .page-leave { animation: page-out-reduced 200ms ease-in forwards; }
+      .page-enter { animation: page-in-reduced 250ms var(--ease-out) 80ms both; }
+      @keyframes page-out-reduced { to { opacity: 0; } }
+      @keyframes page-in-reduced  { from { opacity: 0; } }
+
+      /* También reducir otras animaciones */
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+
+
+    /* === 9. ANIMACIONES DE FEEDBACK (DESIGN.md §3.6) === */
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      15%     { transform: translateX(-7px); }
+      30%     { transform: translateX(6px); }
+      45%     { transform: translateX(-5px); }
+      60%     { transform: translateX(4px); }
+      75%     { transform: translateX(-2px); }
+      90%     { transform: translateX(2px); }
+    }
+    @keyframes flash-green {
+      0%,100% { background: transparent; }
+      40%     { background: rgba(26,122,66,.12); }
+    }
+    @keyframes flash-red {
+      0%,100% { background: transparent; }
+      40%     { background: rgba(196,43,43,.10); }
+    }
+
+
+    /* === 10. COMPONENTES DE TARJETAS (DESIGN.md §3.1) === */
+
+    /* Flip 3D */
+    .card-scene { perspective: 900px; }
+    .card { transform-style: preserve-3d; transition: transform var(--dur-slow) var(--ease-flip); }
+    .card.flipped { transform: rotateY(180deg); }
+    .card-front, .card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .card-back { transform: rotateY(180deg); }
+
+    /* Barra de progreso de sesión (DESIGN.md §3.7) */
+    .session-progress {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--border);
+      z-index: 100;
+    }
+    .session-progress-fill {
+      height: 100%;
+      background: var(--blue-700);
+      border-radius: 0 2px 2px 0;
+      transition: width 300ms var(--ease-out);
+    }
+
+
+    /* === 11. UTILIDADES === */
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+    :focus-visible {
+      outline: 2px solid var(--blue-600);
+      outline-offset: 2px;
+      border-radius: inherit;
+    }
+    .text-center { text-align: center; }
+    .mt-4 { margin-top: var(--sp-4); }
+    .mt-6 { margin-top: var(--sp-6); }
+  </style>
+</head>
+<body>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="app-main" class="app-main">
+    <!-- Las pantallas se inyectan aquí por el router -->
+  </main>
+
+  <!-- BARRA DE NAVEGACIÓN INFERIOR (DESIGN.md §3.4) -->
+  <nav class="bottom-nav" role="navigation" aria-label="Navegación principal">
+
+    <a href="#/inicio" class="nav-item" data-route="inicio" aria-label="Inicio">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>Inicio</span>
+    </a>
+
+    <a href="#/sesion" class="nav-item" data-route="sesion" aria-label="Estudiar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <span>Estudiar</span>
+    </a>
+
+    <a href="#/diccionario" class="nav-item" data-route="diccionario" aria-label="Diccionario">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <span>Dicc.</span>
+    </a>
+
+    <a href="#/estadisticas" class="nav-item" data-route="estadisticas" aria-label="Estadísticas">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <span>Estad.</span>
+    </a>
+
+    <a href="#/configuracion" class="nav-item" data-route="configuracion" aria-label="Configuración">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span>Config.</span>
+    </a>
+
+  </nav>
+
+  <!-- CONTENEDOR DE TOASTS -->
+  <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    'use strict';
+
+    /* === 1. APP OBJECT SCAFFOLD === */
+
+    const App = {
+      data:   {},  // normalize, load functions (Plan 02)
+      state:  {
+        vocab:      [],        // normalized word list (loaded Plan 02)
+        progress:   {},        // Leitner progress by wordId (expanded Plan 05)
+        settings:   { theme: 'auto', heSize: 'normal' },
+        stats:      {},        // session stats (Plan 05)
+        storageOk:  true       // false si localStorage no está disponible
+      },
+      router: {},  // navigate, current route (Plan 03)
+      ui:     {}   // render functions, toast
+    };
+
+    App.init = async function() {
+      App.ui.initTheme();
+      // App.data.load() — añadido en Plan 02
+      // App.router.init() — añadido en Plan 03
+      // renderInicio()    — añadido en Plan 03
+    };
+
+
+    /* === 2. HELPERS DE ALMACENAMIENTO === */
+
+    const Store = {
+      get(key) {
+        try {
+          const v = localStorage.getItem(key);
+          return v ? JSON.parse(v) : null;
+        } catch {
+          App.state.storageOk = false;
+          return null;
+        }
+      },
+      set(key, val) {
+        try {
+          localStorage.setItem(key, JSON.stringify(val));
+        } catch {
+          App.state.storageOk = false;
+        }
+      },
+      remove(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          App.state.storageOk = false;
+        }
+      }
+    };
+
+
+    /* === 3. SISTEMA DE TEMA === */
+
+    /**
+     * Aplica el tema visual.
+     * @param {'auto'|'claro'|'oscuro'} theme
+     */
+    App.ui.applyTheme = function(theme) {
+      const html = document.documentElement;
+      if (theme === 'oscuro') {
+        html.setAttribute('data-theme', 'dark');
+      } else if (theme === 'claro') {
+        html.setAttribute('data-theme', 'light');
+      } else {
+        // auto: eliminar atributo para que la media query decida
+        html.removeAttribute('data-theme');
+      }
+      App.state.settings.theme = theme;
+      Store.set('ivrit.v1.settings', App.state.settings);
+    };
+
+    App.ui.initTheme = function() {
+      const saved = Store.get('ivrit.v1.settings') || {};
+      const theme = saved.theme || 'auto';
+      const heSize = saved.heSize || 'normal';
+      // Restaurar heSize también
+      document.documentElement.setAttribute('data-he-size', heSize);
+      App.state.settings.heSize = heSize;
+      // Aplicar tema (también persiste en settings)
+      App.ui.applyTheme(theme);
+    };
+
+
+    /* === 4. UTILIDADES DE UI === */
+
+    /**
+     * Muestra un toast en la parte inferior.
+     * @param {string} msg
+     * @param {number} duration ms antes de cerrar (default 3000)
+     */
+    App.ui.showToast = function(msg, duration = 3000) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = msg;
+      document.getElementById('toast-container').appendChild(t);
+      setTimeout(() => {
+        t.classList.add('out');
+        t.addEventListener('animationend', () => t.remove(), { once: true });
+      }, duration);
+    };
+
+
+    /* === 5. ARRANQUE === */
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
