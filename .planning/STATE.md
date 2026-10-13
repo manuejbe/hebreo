@@ -23,17 +23,17 @@ See: `.planning/PROJECT.md` (updated 2026-10-13)
 
 ## Current Phase
 
-**Phase 4: Unir con flechas — PLANNED, READY TO EXECUTE**
+**Phase 4: Unir con flechas — IN PROGRESS (1/2 plans complete)**
 Goal: El modo de matching con líneas SVG funciona en móvil y desktop, con tap y variantes (ES↔HE, sg↔pl, masc↔fem).
 
-Status: Planned — 2 plans, 2 waves (2026-10-13)
+Status: In progress — 2 plans, 2 waves (2026-10-13)
 
 **Plans:**
 
-- Plan 01 (Wave 1): renderUnir — layout 2 cols, tap-tap logic, SVG lines, feedback, round summary (MATC-01,02,03,04,06)
-- Plan 02 (Wave 2): Variant selector in renderSesion + session.start filtering + router wiring (MATC-05,06)
+- [x] Plan 01 (Wave 1): renderUnir — layout 2 cols, tap-tap logic, SVG lines, feedback, round summary (MATC-01,02,03,04,06) — `b7876de`
+- [ ] Plan 02 (Wave 2): Variant selector in renderSesion + session.start filtering + router wiring (MATC-05,06)
 
-**Next:** `/gsd-execute-phase 4`
+**Next:** `/gsd-execute-phase 4` (Plan 02)
 
 ## Phase History
 
@@ -78,8 +78,10 @@ None.
 - `App.ui.renderOpcionMultiple(el)` — MCQ completo: getDistractors, grid 2×2, handleAnswer, onKey
 - `getDistractors(correct, dir)` — función global: usedTexts Set, pickN shuffle, prioridad kind+cat+region
 - Botón "Mostrar respuesta" pre-flip; "✗ No la sabía / ✓ La sabía" post-flip (fix UAT 2026-10-13)
-- Router renderers map cubre: tarjetas, opcion-multiple, resultado (no stubs)
+- Router renderers map cubre: tarjetas, opcion-multiple, resultado, unir (no stubs)
 - `App.state.progress{}` en localStorage `ivrit.v1.progress`: box 0-5, lastWrong timestamp
+- `App.ui.renderUnir(el)` — tap-tap matching: 6 pares/ronda, SVG overlay, shake 400ms, resumen inline, Leitner solo ES↔HE
+- `App.session._matchVariant` — variant field ('es-he'|'sg-pl'|'masc-fem'); defaults a 'es-he' en renderUnir; selector en Plan 02
 
 ## Performance Metrics
 
@@ -90,7 +92,9 @@ None.
 | 01-base | 03 | 8min | 2 | 1 |
 | 01-base | 04 | 6min | 1 | 1 |
 | 01-base | 05 | 4min | 1 | 1 |
+| 04-unir-con-flechas | 01 | 8min | 1 | 1 |
 
 ---
-*Last session: 2026-10-13T19:00:00Z — Phase 4 Unir con flechas PLANIFICADA (2 planes, tap-tap + SVG lines + variants)*
-*Next: /gsd-execute-phase 4*
+*Last session: 2026-10-13T20:00:00Z — Phase 4 Plan 01 ejecutado: App.ui.renderUnir completo (tap-tap, SVG, shake, resumen inline)*
+*Stopped at: Phase 4 Plan 02 (variant selector in renderSesion)*
+*Next: /gsd-execute-phase 4 (Plan 02)*

@@ -142,7 +142,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — renderUnir: layout dos columnas, tap-tap, SVG overlay líneas rectas, feedback shake/verde, redraw resize, resumen inline de ronda
+- [x] 04-01-PLAN.md — renderUnir: layout dos columnas, tap-tap, SVG overlay líneas rectas, feedback shake/verde, redraw resize, resumen inline de ronda — `b7876de`
 - [ ] 04-02-PLAN.md — Variante selector en renderSesion + filtro por variante en session.start + _matchVariant en _sesionEmpezar
 
 ---
