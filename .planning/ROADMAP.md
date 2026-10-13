@@ -139,6 +139,12 @@ Plans:
 - Cálculo de posiciones con ResizeObserver + scroll listener
 - Tres variantes en el selector de sesión
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — renderUnir: layout dos columnas, tap-tap, SVG overlay líneas rectas, feedback shake/verde, redraw resize, resumen inline de ronda
+- [ ] 04-02-PLAN.md — Variante selector en renderSesion + filtro por variante en session.start + _matchVariant en _sesionEmpezar
+
 ---
 
 ## Phase 5: Progreso Leitner completo
