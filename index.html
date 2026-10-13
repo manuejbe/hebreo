@@ -519,6 +519,9 @@
   <script>
     'use strict';
 
+    /* === CONFIG === */
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmqmnYsJrX-ux2YE1TFzfwag76I1VDibe5hewXXa8O8sODnY6qjCdcYlg5dLgE7K2s/exec";
+
     /* === 1. APP OBJECT SCAFFOLD === */
 
     const App = {
@@ -537,7 +540,7 @@
     App.init = async function() {
       App.ui.initTheme();
       await App.data.load();
-      // App.router.init() — añadido en Plan 03
+      App.router.init();
     };
 
 
@@ -763,7 +766,269 @@
     };
 
 
-    /* === 6. ARRANQUE === */
+    /* === 6. ROUTER === */
+
+    App.router = {
+      current: { route: 'inicio', params: {} },
+
+      _parseHash(hash) {
+        // '#/inicio?cat=Verbos' → { route: 'inicio', params: { cat: 'Verbos' } }
+        const withoutHash = (hash || '#/inicio').replace(/^#\/?/, '');
+        const [routePart, queryPart] = withoutHash.split('?');
+        const route = routePart || 'inicio';
+        const params = {};
+        if (queryPart) {
+          queryPart.split('&').forEach(pair => {
+            const [k, v] = pair.split('=');
+            if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || '');
+          });
+        }
+        return { route, params };
+      },
+
+      navigate(hash) {
+        const parsed = App.router._parseHash(hash);
+        App.router.current = parsed;
+
+        // Update nav active state
+        document.querySelectorAll('.nav-item').forEach(el => {
+          const r = el.dataset.route;
+          const studyRoutes = ['sesion','tarjetas','opcion-multiple','unir','completar','concordancia','escribir','clasificar','contrarreloj'];
+          let active = false;
+          if (r === 'sesion')        active = studyRoutes.includes(parsed.route);
+          else if (r === 'estadisticas')  active = parsed.route === 'estadisticas';
+          else if (r === 'configuracion') active = parsed.route === 'configuracion';
+          else if (r === 'diccionario')   active = parsed.route === 'diccionario';
+          else if (r === 'inicio')        active = parsed.route === 'inicio';
+          el.classList.toggle('active', active);
+        });
+
+        // Page transition: add leave class to current content
+        const main = document.getElementById('app-main');
+        const existing = main.firstElementChild;
+        if (existing) {
+          existing.classList.add('page-leave');
+          existing.addEventListener('animationend', () => {
+            App.router._renderScreen(parsed, main);
+          }, { once: true });
+          // Fallback for reduced-motion (animation may not fire)
+          setTimeout(() => {
+            if (main.firstElementChild === existing) {
+              App.router._renderScreen(parsed, main);
+            }
+          }, 250);
+        } else {
+          App.router._renderScreen(parsed, main);
+        }
+      },
+
+      _renderScreen(parsed, main) {
+        main.innerHTML = '';
+        const screenEl = document.createElement('div');
+        screenEl.className = 'screen active page-enter';
+
+        const renderers = {
+          inicio:      () => App.ui.renderInicio(screenEl),
+          diccionario: () => App.ui.renderDiccionario(screenEl),
+          sesion:      () => App.ui.renderSesion(screenEl),
+        };
+
+        const stubs = ['tarjetas','opcion-multiple','unir','completar','concordancia',
+                       'escribir','clasificar','contrarreloj','estadisticas','configuracion'];
+        if (renderers[parsed.route]) {
+          renderers[parsed.route]();
+        } else if (stubs.includes(parsed.route)) {
+          App.ui.renderStub(screenEl, parsed.route);
+        } else {
+          App.ui.renderInicio(screenEl); // fallback
+        }
+
+        main.appendChild(screenEl);
+      },
+
+      init() {
+        window.addEventListener('hashchange', () => {
+          App.router.navigate(window.location.hash);
+        });
+        const hash = window.location.hash || '#/inicio';
+        if (!window.location.hash) history.replaceState(null, '', '#/inicio');
+        App.router.navigate(hash);
+      }
+    };
+
+    // Stub renderer for unimplemented screens
+    App.ui.renderStub = function(el, route) {
+      const names = {
+        'tarjetas': 'Tarjetas', 'opcion-multiple': 'Opción múltiple',
+        'unir': 'Unir con flechas', 'completar': 'Completar la forma',
+        'concordancia': 'Concordancia', 'escribir': 'Escribir',
+        'clasificar': 'Clasificar', 'contrarreloj': 'Contrarreloj',
+        'estadisticas': 'Estadísticas', 'configuracion': 'Configuración'
+      };
+      el.innerHTML = `
+        <div style="padding: var(--sp-10) var(--sp-4); text-align: center; color: var(--text-muted);">
+          <p style="font: 600 var(--text-lg) var(--font-display); color: var(--text-secondary); margin-bottom: var(--sp-3);">${names[route] || route}</p>
+          <p style="font-size: var(--text-sm);">Disponible próximamente</p>
+        </div>`;
+    };
+
+    // Stub renderers for screens implemented in later plans
+    App.ui.renderDiccionario = function(el) { App.ui.renderStub(el, 'diccionario'); };
+    App.ui.renderSesion      = function(el) { App.ui.renderStub(el, 'sesion'); };
+
+
+    /* === 7. INICIO SCREEN === */
+
+    App.ui.renderInicio = function(el) {
+      // Compute summary counts
+      const prog   = App.state.progress;
+      const total  = App.state.vocab.length;
+      const progEntries = Object.values(prog);
+      const mastered    = progEntries.filter(p => p.box === 5).length;
+      const now         = Date.now();
+      const dueToday    = progEntries.filter(p => p.box > 0 && p.due <= now).length;
+      const inProgress  = progEntries.filter(p => p.box > 0).length;
+      const newWords    = total - inProgress;
+      const streak      = (App.state.stats && App.state.stats.streak) || 0;
+
+      // Last sync date
+      const cache = (function() {
+        try { const v = localStorage.getItem('ivrit.v1.vocabCache'); return v ? JSON.parse(v) : null; } catch { return null; }
+      })();
+      const lastSync = cache && cache.updated
+        ? new Date(cache.updated).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'Nunca';
+
+      // Category progress bars — group vocab by category, count per box
+      const catData = {};
+      for (const w of App.state.vocab) {
+        if (!catData[w.cat]) catData[w.cat] = { name: w.cat, counts: [0,0,0,0,0,0] };
+        const box = (prog[w.id] && prog[w.id].box) || 0;
+        catData[w.cat].counts[box]++;
+      }
+      const cats = Object.values(catData);
+
+      // Mode grid: all 10 modes, all unavailable in Phase 1
+      const modes = [
+        { id: 'tarjetas',        icon: '🃏', name: 'Tarjetas',           desc: 'Memoriza con flashcards',           available: false },
+        { id: 'opcion-multiple', icon: '❓', name: 'Opción múltiple',    desc: 'Elige la traducción correcta',      available: false },
+        { id: 'unir',            icon: '↔',  name: 'Unir con flechas',   desc: 'Conecta pares español-hebreo',      available: false },
+        { id: 'escribir',        icon: '✍',  name: 'Escribir',           desc: 'Escribe la traducción en hebreo',   available: false },
+        { id: 'completar',       icon: '📝', name: 'Completar la forma', desc: 'Completa la forma correcta',        available: false },
+        { id: 'concordancia',    icon: '🔤', name: 'Concordancia',       desc: 'Elige la forma según el pronombre', available: false },
+        { id: 'clasificar',      icon: '📂', name: 'Clasificar',         desc: 'Arrastra palabras a sus grupos',    available: false },
+        { id: 'contrarreloj',    icon: '⏱',  name: 'Contrarreloj',       desc: 'Responde en 60 segundos',           available: false },
+        { id: 'repaso-errores',  icon: '🔁', name: 'Repaso de errores',  desc: 'Practica lo que fallaste',          available: false },
+        { id: 'repaso-dia',      icon: '📅', name: 'Repaso del día',     desc: 'Palabras espaciadas de hoy',        available: false },
+      ];
+
+      // Box colors for stacked progress bars (box 0–5)
+      const boxColors = ['var(--border)','#FFE4E4','var(--amber-light)','var(--blue-100)','var(--green-light)','var(--gold-light)'];
+
+      el.innerHTML = `
+        <div class="screen-inicio" style="padding-top: var(--sp-4);">
+
+          <!-- Header -->
+          <header style="margin-bottom: var(--sp-5);">
+            <h1 style="font: 600 var(--text-4xl) var(--font-display); color: var(--text-primary); margin-bottom: var(--sp-1);">Ivrit</h1>
+            <p style="font-size: var(--text-sm); color: var(--text-muted);">Vocabulario hebreo</p>
+          </header>
+
+          <!-- Summary stats: 3-col grid (wraps 5 cards) -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-5);">
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font: 700 var(--text-3xl) var(--font-display); color: var(--blue-700);">${total}</div>
+              <div style="font: 600 var(--text-xs) var(--font-body); color: var(--text-muted); margin-top: var(--sp-1);">Total</div>
+            </div>
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font: 700 var(--text-3xl) var(--font-display); color: var(--gold);">${mastered}</div>
+              <div style="font: 600 var(--text-xs) var(--font-body); color: var(--text-muted); margin-top: var(--sp-1);">Dominadas</div>
+            </div>
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font: 700 var(--text-3xl) var(--font-display); color: var(--amber);">${dueToday}</div>
+              <div style="font: 600 var(--text-xs) var(--font-body); color: var(--text-muted); margin-top: var(--sp-1);">Para hoy</div>
+            </div>
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font: 700 var(--text-3xl) var(--font-display); color: var(--blue-500);">${newWords}</div>
+              <div style="font: 600 var(--text-xs) var(--font-body); color: var(--text-muted); margin-top: var(--sp-1);">Nuevas</div>
+            </div>
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font: 700 var(--text-3xl) var(--font-display); color: var(--green);">${streak}</div>
+              <div style="font: 600 var(--text-xs) var(--font-body); color: var(--text-muted); margin-top: var(--sp-1);">Racha 🔥</div>
+            </div>
+          </div>
+
+          <!-- Repaso del día (prominent button) -->
+          <button onclick="App.ui.showToast('Repaso del día disponible próximamente')"
+            style="display: block; width: 100%; padding: var(--sp-4) var(--sp-6); background: var(--blue-700); color: var(--text-on-primary); border-radius: var(--radius-lg); font: 700 var(--text-lg) var(--font-body); box-shadow: var(--shadow-md); margin-bottom: var(--sp-6); cursor: pointer; border: none; transition: opacity var(--dur-fast);"
+            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"
+            aria-label="Iniciar repaso del día">
+            📅 Repaso del día
+          </button>
+
+          <!-- Mode grid -->
+          <section aria-labelledby="modos-heading" style="margin-bottom: var(--sp-8);">
+            <h2 id="modos-heading" style="font: 600 1.375rem var(--font-display); color: var(--text-primary); margin-bottom: var(--sp-4);">Modos de estudio</h2>
+            <div class="mode-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3);">
+              ${modes.map(m => `
+                <div class="mode-card"
+                  style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); box-shadow: var(--shadow-sm); ${!m.available ? 'opacity: 0.45; pointer-events: none;' : 'cursor: pointer;'}"
+                  ${m.available ? `onclick="location.hash='#/${m.id}'" role="button" tabindex="0" aria-label="${m.name}"` : 'aria-hidden="true"'}>
+                  <div style="font-size: 1.75rem; margin-bottom: var(--sp-2);" aria-hidden="true">${m.icon}</div>
+                  <div style="font: 600 1rem var(--font-display); color: var(--text-primary); margin-bottom: var(--sp-1);">${m.name}</div>
+                  <div style="font: 400 var(--text-xs) var(--font-body); color: var(--text-secondary);">${m.desc}</div>
+                </div>`).join('')}
+            </div>
+          </section>
+
+          <!-- Category progress bars -->
+          <section aria-labelledby="cats-heading" style="margin-bottom: var(--sp-8);">
+            <h2 id="cats-heading" style="font: 600 1.375rem var(--font-display); color: var(--text-primary); margin-bottom: var(--sp-4);">Progreso por categoría</h2>
+            <div>
+              ${cats.map(cat => {
+                const catTotal = cat.counts.reduce((a, b) => a + b, 0);
+                const bars = cat.counts.map((count, box) => {
+                  const pct = catTotal > 0 ? (count / catTotal) * 100 : 0;
+                  return pct > 0 ? `<div style="width:${pct.toFixed(1)}%; background:${boxColors[box]}; height:100%;" title="Caja ${box}: ${count}"></div>` : '';
+                }).join('');
+                return `
+                  <div style="margin-bottom: var(--sp-3);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span style="font: 600 var(--text-sm) var(--font-body); color: var(--text-primary);">${cat.name}</span>
+                      <span style="font: 400 var(--text-xs) var(--font-body); color: var(--text-muted);">${catTotal}</span>
+                    </div>
+                    <div style="height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; display: flex;">${bars}</div>
+                  </div>`;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- Sync section -->
+          <section style="margin-bottom: var(--sp-8); padding: var(--sp-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);">
+              <span style="font: 400 var(--text-sm) var(--font-body); color: var(--text-muted);">Última sincronización: <strong style="color: var(--text-secondary);">${lastSync}</strong></span>
+              <button onclick="App.ui.showToast('Sincronización disponible en la próxima versión')"
+                style="padding: var(--sp-2) var(--sp-4); border: 1.5px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-secondary); font: 600 var(--text-sm) var(--font-body); cursor: pointer; min-height: 44px; transition: background var(--dur-fast);"
+                onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'"
+                aria-label="Sincronizar con Google Docs">
+                🔄 Sincronizar
+              </button>
+            </div>
+          </section>
+
+        </div>`;
+
+      // Responsive mode grid: 3 cols on desktop
+      if (!document.getElementById('inicio-grid-style')) {
+        const s = document.createElement('style');
+        s.id = 'inicio-grid-style';
+        s.textContent = '@media (min-width: 600px) { .mode-grid { grid-template-columns: repeat(3, 1fr) !important; } }';
+        document.head.appendChild(s);
+      }
+    };
+
+
+    /* === 8. ARRANQUE === */
 
     document.addEventListener('DOMContentLoaded', () => App.init());
   </script>
