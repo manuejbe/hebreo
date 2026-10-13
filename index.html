@@ -1112,6 +1112,302 @@
     };
 
 
+    /* === 7. TARJETAS SCREEN (SPEC §4.3, FLAS-01..06) === */
+
+    App.ui.renderTarjetas = function(el) {
+      if (!App.session || !App.session.words || App.session.words.length === 0) {
+        location.hash = '#/sesion'; return;
+      }
+      // Session end check
+      if (App.session.index >= App.session.words.length) {
+        App.ui.renderResultado(el); return;
+      }
+
+      const total = App.session.words.length;
+      const idx   = App.session.index;
+      const word  = App.session.words[idx];
+      const pct   = (idx / total) * 100;
+
+      // Determine front/back direction
+      const dir = App.session.direction === 'mezclada'
+        ? (Math.random() < 0.5 ? 'es-he' : 'he-es')
+        : App.session.direction;
+      App.session._cardDir = dir;
+
+      const frontText  = dir === 'es-he' ? word.es : (word.msg || word.es);
+      const frontIsHe  = dir === 'he-es';
+
+      // Build back content per kind (SPEC §4.3)
+      function addRow(table, labelHe, valHe, isHe) {
+        const tr = document.createElement('tr');
+        const tdLabel = document.createElement('td');
+        tdLabel.style.cssText = 'padding:4px 0;color:rgba(255,255,255,.60);font-size:var(--text-xs);width:60px;';
+        if (isHe) { tdLabel.lang = 'he'; tdLabel.dir = 'rtl'; tdLabel.style.fontFamily = 'var(--font-hebrew)'; }
+        tdLabel.textContent = labelHe;
+        const tdVal = document.createElement('td');
+        tdVal.style.cssText = 'padding:4px 0;text-align:right;';
+        if (isHe) {
+          tdVal.lang = 'he'; tdVal.dir = 'rtl';
+          tdVal.style.fontFamily = 'var(--font-hebrew)';
+          tdVal.style.fontSize = 'calc(var(--he-scale)*1rem)';
+          tdVal.style.direction = 'rtl';
+        }
+        tdVal.textContent = valHe;
+        tr.appendChild(tdLabel);
+        tr.appendChild(tdVal);
+        table.appendChild(tr);
+      }
+
+      function buildBack() {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:var(--sp-6);color:var(--text-on-primary);';
+
+        // Main Hebrew form large
+        const mainEl = document.createElement('p');
+        mainEl.lang = 'he'; mainEl.dir = 'rtl';
+        mainEl.style.cssText = 'font-family:var(--font-hebrew);font-size:calc(var(--he-scale)*2rem);font-weight:700;direction:rtl;text-align:right;margin-bottom:var(--sp-4);line-height:1.2;';
+        mainEl.textContent = word.msg || '';
+        div.appendChild(mainEl);
+
+        // Spanish translation
+        const transEl = document.createElement('p');
+        transEl.style.cssText = 'font:600 var(--text-lg) var(--font-body);color:rgba(255,255,255,.85);margin-bottom:var(--sp-4);';
+        transEl.textContent = word.es;
+        div.appendChild(transEl);
+
+        // Forms table by kind
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:var(--sp-4);font-size:calc(var(--he-scale)*0.875rem);';
+
+        if (word.kind === 'noun') {
+          if (word.msg)  addRow(table, 'יחיד', word.msg, true);
+          if (word.mpl && word.mpl !== word.msg) addRow(table, 'רבים', word.mpl, true);
+        } else if (word.kind === 'gendered') {
+          if (word.msg)  addRow(table, 'יחיד', word.msg, true);
+          if (word.fsg)  addRow(table, 'יחידה', word.fsg, true);
+          if (word.mpl && word.mpl !== word.msg) addRow(table, 'רבים', word.mpl, true);
+          if (word.fpl)  addRow(table, 'רבות', word.fpl, true);
+        } else if (word.kind === 'verb') {
+          if (word.msg)  addRow(table, 'פועל', word.msg, true);
+        } else if (word.kind === 'country') {
+          if (word.msg)  addRow(table, 'מדינה', word.msg, true);
+          if (word.group) addRow(table, 'אזור', word.group, true);
+        } else {
+          // expr and fallback
+          if (word.msg)  addRow(table, 'ביטוי', word.msg, true);
+        }
+        for (const [k, v] of Object.entries(word.extra || {})) {
+          if (v) addRow(table, k, v, false);
+        }
+        div.appendChild(table);
+        return div;
+      }
+
+      // Build screen DOM (textContent only — no innerHTML with word data, T-03-04)
+      el.innerHTML = '';
+
+      // Progress bar (DESIGN.md §3.7)
+      const progBar  = document.createElement('div');
+      progBar.className = 'session-progress';
+      const progFill = document.createElement('div');
+      progFill.className = 'session-progress-fill';
+      progFill.style.width = pct + '%';
+      progBar.appendChild(progFill);
+      el.appendChild(progBar);
+
+      // Counter
+      const counter = document.createElement('p');
+      counter.style.cssText = 'text-align:center;font:600 var(--text-sm) var(--font-body);color:var(--text-muted);padding:var(--sp-6) var(--sp-4) var(--sp-3);';
+      counter.textContent = (idx + 1) + ' / ' + total;
+      el.appendChild(counter);
+
+      // Card scene (DESIGN.md §3.1)
+      const scene = document.createElement('div');
+      scene.className = 'card-scene';
+      scene.style.cssText = 'padding:0 var(--sp-4);margin-bottom:var(--sp-5);';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.cssText = 'position:relative;min-height:260px;border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);cursor:pointer;';
+      card.setAttribute('aria-label', 'Tarjeta. Toca para ver la respuesta.');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('role', 'button');
+
+      // Front face
+      const front = document.createElement('div');
+      front.className = 'card-front';
+      front.style.cssText = 'position:absolute;inset:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--sp-6);overflow:hidden;';
+
+      // Alef watermark
+      const wm = document.createElement('span');
+      wm.setAttribute('aria-hidden', 'true');
+      wm.style.cssText = 'position:absolute;font-family:var(--font-hebrew);font-size:min(40vw,180px);opacity:.04;color:var(--blue-700);pointer-events:none;user-select:none;line-height:1;';
+      wm.textContent = 'א';
+      front.appendChild(wm);
+
+      // Category chip
+      const catChip = document.createElement('span');
+      catChip.style.cssText = 'position:absolute;top:var(--sp-4);left:var(--sp-4);font:600 var(--text-xs) var(--font-body);background:var(--blue-50);color:var(--blue-700);border-radius:var(--radius-pill);padding:2px 8px;';
+      catChip.textContent = word.cat;
+      front.appendChild(catChip);
+
+      // Box chip (Leitner)
+      const prog = App.state.progress[word.id];
+      const box  = prog ? prog.box : 0;
+      const boxChipEl = document.createElement('span');
+      boxChipEl.className = 'box-chip';
+      boxChipEl.setAttribute('data-box', box);
+      boxChipEl.style.cssText += 'position:absolute;top:var(--sp-4);right:var(--sp-4);';
+      boxChipEl.textContent = 'Caja ' + box;
+      front.appendChild(boxChipEl);
+
+      // Front word
+      const frontWord = document.createElement('div');
+      if (frontIsHe) {
+        frontWord.lang = 'he'; frontWord.dir = 'rtl';
+        frontWord.style.cssText = 'font-family:var(--font-hebrew);font-size:calc(var(--he-scale)*2rem);font-weight:700;direction:rtl;text-align:center;line-height:1.2;color:var(--text-primary);';
+      } else {
+        frontWord.style.cssText = 'font:600 2rem var(--font-display);color:var(--text-primary);text-align:center;line-height:1.2;';
+      }
+      frontWord.textContent = frontText;
+      front.appendChild(frontWord);
+
+      // Tap hint
+      const hint = document.createElement('p');
+      hint.style.cssText = 'position:absolute;bottom:var(--sp-4);font:400 var(--text-xs) var(--font-body);color:var(--text-muted);opacity:.5;';
+      hint.textContent = 'toca para girar';
+      front.appendChild(hint);
+
+      // Back face
+      const back = document.createElement('div');
+      back.className = 'card-back';
+      back.style.cssText = 'position:absolute;inset:0;background:var(--blue-900);border-radius:var(--radius-xl);overflow:hidden;';
+
+      const wmBack = document.createElement('span');
+      wmBack.setAttribute('aria-hidden', 'true');
+      wmBack.style.cssText = 'position:absolute;font-family:var(--font-hebrew);font-size:min(40vw,180px);opacity:.06;color:#fff;pointer-events:none;user-select:none;line-height:1;';
+      wmBack.textContent = 'א';
+      back.appendChild(wmBack);
+      back.appendChild(buildBack());
+
+      // Swipe overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:absolute;inset:0;border-radius:var(--radius-xl);pointer-events:none;opacity:0;transition:opacity 80ms;display:flex;align-items:center;justify-content:center;z-index:10;font:700 var(--text-xl) var(--font-body);';
+
+      card.appendChild(front);
+      card.appendChild(back);
+      card.appendChild(overlay);
+      scene.appendChild(card);
+      el.appendChild(scene);
+
+      // Qualify buttons
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:var(--sp-3);padding:0 var(--sp-4);';
+
+      const btnWrong = document.createElement('button');
+      btnWrong.style.cssText = 'flex:1;height:48px;border-radius:var(--radius-pill);border:1.5px solid var(--red);color:var(--red);background:transparent;font:600 var(--text-sm) var(--font-body);cursor:pointer;transition:background var(--dur-fast);';
+      btnWrong.textContent = '← No la sé';
+      btnWrong.setAttribute('aria-label', 'No sé esta palabra');
+      btnWrong.addEventListener('mouseenter', () => { btnWrong.style.background = 'var(--red-bg)'; });
+      btnWrong.addEventListener('mouseleave', () => { btnWrong.style.background = 'transparent'; });
+
+      const btnRight = document.createElement('button');
+      btnRight.style.cssText = 'flex:1;height:48px;border-radius:var(--radius-pill);background:var(--blue-700);color:#fff;font:600 var(--text-sm) var(--font-body);cursor:pointer;border:none;transition:background var(--dur-fast);';
+      btnRight.textContent = 'La sé →';
+      btnRight.setAttribute('aria-label', 'Sé esta palabra');
+      btnRight.addEventListener('mouseenter', () => { btnRight.style.background = 'var(--blue-800)'; });
+      btnRight.addEventListener('mouseleave', () => { btnRight.style.background = 'var(--blue-700)'; });
+
+      btnRow.appendChild(btnWrong);
+      btnRow.appendChild(btnRight);
+      el.appendChild(btnRow);
+
+      // --- INTERACTION LOGIC ---
+
+      let isFlipped = false;
+      let swipeStartX = 0, swipeStartY = 0;
+      let qualified = false;  // T-03-06: prevents double-qualify
+
+      function flipCard() {
+        isFlipped = !isFlipped;
+        card.classList.toggle('flipped', isFlipped);
+      }
+
+      function qualify(correct) {
+        if (qualified) return;  // T-03-06: guard
+        qualified = true;
+        App.ui.updateProgress(word.id, correct);
+        App.session.results.push({ wordId: word.id, correct });
+        App.session.index++;
+        scene.style.animation = (correct ? 'flash-green' : 'flash-red') + ' 300ms ease-out';
+        scene.addEventListener('animationend', () => {
+          scene.style.animation = '';
+          App.ui.renderTarjetas(el);
+        }, { once: true });
+        // Fallback for prefers-reduced-motion (animation may not fire)
+        setTimeout(() => {
+          if (qualified && App.session.index > idx) App.ui.renderTarjetas(el);
+        }, 350);
+      }
+
+      // Tap to flip
+      card.addEventListener('click', (e) => {
+        if (Math.abs(e.clientX - swipeStartX) < 5) flipCard();
+      });
+      card.addEventListener('keydown', e => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+      });
+
+      // Touch swipe (FLAS-04)
+      card.addEventListener('touchstart', e => {
+        swipeStartX = e.touches[0].clientX;
+        swipeStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      card.addEventListener('touchmove', e => {
+        if (!isFlipped) return;
+        const dx = e.touches[0].clientX - swipeStartX;
+        const dy = e.touches[0].clientY - swipeStartY;
+        if (Math.abs(dx) < Math.abs(dy)) return;  // vertical scroll — ignore
+        const t = Math.min(Math.abs(dx) / 120, 1);
+        if (dx > 0) {
+          overlay.style.background = 'rgba(26,122,66,.18)';
+          overlay.style.color = 'var(--green)';
+          overlay.textContent = '✓ La sé';
+        } else {
+          overlay.style.background = 'rgba(196,43,43,.18)';
+          overlay.style.color = 'var(--red)';
+          overlay.textContent = '✗ No la sé';
+        }
+        overlay.style.opacity = t;
+      }, { passive: true });
+
+      card.addEventListener('touchend', e => {
+        overlay.style.opacity = 0;
+        if (!isFlipped) return;
+        const dx = e.changedTouches[0].clientX - swipeStartX;
+        if (Math.abs(dx) > 60) qualify(dx > 0);
+      }, { passive: true });
+
+      // Keyboard (FLAS-05: Space=flip, ArrowRight=sabe, ArrowLeft=no sabe)
+      function onKey(e) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (isFlipped) qualify(true);  else flipCard(); }
+        if (e.key === 'ArrowLeft')  { e.preventDefault(); if (isFlipped) qualify(false); else flipCard(); }
+        if (e.key === ' ')          { e.preventDefault(); flipCard(); }
+      }
+      document.addEventListener('keydown', onKey);
+      // T-03-05: remove keyboard listener when screen is replaced
+      const observer = new MutationObserver(() => {
+        if (!el.isConnected) { document.removeEventListener('keydown', onKey); observer.disconnect(); }
+      });
+      observer.observe(document.getElementById('app-main'), { childList: true });
+
+      // Button handlers (flip first if not already flipped)
+      btnWrong.addEventListener('click', () => { if (!isFlipped) flipCard(); else qualify(false); });
+      btnRight.addEventListener('click', () => { if (!isFlipped) flipCard(); else qualify(true); });
+    };
+
+
     /* === 6. ROUTER === */
 
     App.router = {
@@ -1205,8 +1501,7 @@
       }
     };
 
-    // Temporary stubs — replaced by Plan 02 and 03
-    App.ui.renderTarjetas       = App.ui.renderTarjetas       || function(el) { App.ui.renderStub(el, 'tarjetas'); };
+    // Temporary stub — replaced by Plan 03
     App.ui.renderOpcionMultiple = App.ui.renderOpcionMultiple || function(el) { App.ui.renderStub(el, 'opcion-multiple'); };
 
     // Stub renderer for unimplemented screens
