@@ -766,6 +766,101 @@
     };
 
 
+    /* === 5b. SINCRONIZACIÓN === */
+
+    App.sync = {};
+
+    App.sync.fetchWithTimeout = async function(url, ms) {
+      if (!navigator.onLine) throw Object.assign(new Error('sin conexión'), { code: 'offline' });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const resp = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!resp.ok) throw Object.assign(new Error('URL no responde'), { code: 'timeout' });
+        return await resp.json();
+      } catch (err) {
+        clearTimeout(timer);
+        if (err.code) throw err;
+        if (err.name === 'AbortError') throw Object.assign(new Error('La URL no respondió en 20 s'), { code: 'timeout' });
+        throw Object.assign(new Error('sin conexión'), { code: 'offline' });
+      }
+    };
+
+    App.sync.validateRaw = function(data) {
+      return !!(data &&
+        data.source === 'google-docs' &&
+        Array.isArray(data.categories) &&
+        data.categories.length > 0 &&
+        data.categories.every(c =>
+          typeof c.name === 'string' &&
+          Array.isArray(c.headers) &&
+          Array.isArray(c.rows)
+        )
+      );
+    };
+
+    App.sync.diffVocab = function(oldWords, newWords) {
+      const oldMap = new Map(oldWords.map(w => [w.id, w]));
+      const newMap = new Map(newWords.map(w => [w.id, w]));
+      const FIELDS = ['es', 'msg', 'mpl', 'fsg', 'fpl', 'group'];
+
+      const added    = newWords.filter(w => !oldMap.has(w.id));
+      const deleted  = oldWords.filter(w => !newMap.has(w.id));
+      const modified = newWords.filter(w => {
+        const old = oldMap.get(w.id);
+        if (!old) return false;
+        return FIELDS.some(f => w[f] !== old[f]);
+      });
+
+      return { added, modified, deleted };
+    };
+
+    App.sync.applyDiff = function(diff, rawData) {
+      // Added: push to vocab (no progress entry = box 0 by default)
+      diff.added.forEach(w => App.state.vocab.push(w));
+
+      // Modified: replace in-place, preserve progress
+      diff.modified.forEach(w => {
+        const idx = App.state.vocab.findIndex(v => v.id === w.id);
+        if (idx !== -1) App.state.vocab[idx] = w;
+      });
+
+      // Deleted: remove from vocab, keep progress (SYNC-04)
+      diff.deleted.forEach(w => {
+        const idx = App.state.vocab.findIndex(v => v.id === w.id);
+        if (idx !== -1) App.state.vocab.splice(idx, 1);
+      });
+
+      // Persist updated cache
+      Store.set('ivrit.v1.vocabCache', {
+        raw: rawData,
+        updated: rawData.updated || new Date().toISOString()
+      });
+    };
+
+    App.sync.run = async function() {
+      let raw;
+      try {
+        raw = await App.sync.fetchWithTimeout(APPS_SCRIPT_URL, 20000);
+      } catch (err) {
+        throw { code: err.code || 'offline', message: err.message };
+      }
+      if (!App.sync.validateRaw(raw)) {
+        throw { code: 'invalid', message: 'El formato de la respuesta no es válido' };
+      }
+      let newWords;
+      try {
+        newWords = App.data.normalize(raw);
+      } catch (_) {
+        throw { code: 'invalid', message: 'Error al procesar los datos recibidos' };
+      }
+      const diff = App.sync.diffVocab(App.state.vocab, newWords);
+      App.sync.applyDiff(diff, raw);
+      return { diff, updatedAt: raw.updated || new Date().toISOString() };
+    };
+
+
     /* === 6. ROUTER === */
 
     App.router = {
