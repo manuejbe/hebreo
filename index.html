@@ -1304,20 +1304,28 @@
       const btnRow = document.createElement('div');
       btnRow.style.cssText = 'display:flex;gap:var(--sp-3);padding:0 var(--sp-4);';
 
+      const btnShow = document.createElement('button');
+      btnShow.style.cssText = 'flex:1;height:48px;border-radius:var(--radius-pill);background:var(--blue-700);color:#fff;font:600 var(--text-sm) var(--font-body);cursor:pointer;border:none;transition:background var(--dur-fast);';
+      btnShow.textContent = 'Mostrar respuesta';
+      btnShow.setAttribute('aria-label', 'Mostrar respuesta');
+      btnShow.addEventListener('mouseenter', () => { btnShow.style.background = 'var(--blue-800)'; });
+      btnShow.addEventListener('mouseleave', () => { btnShow.style.background = 'var(--blue-700)'; });
+
       const btnWrong = document.createElement('button');
-      btnWrong.style.cssText = 'flex:1;height:48px;border-radius:var(--radius-pill);border:1.5px solid var(--red);color:var(--red);background:transparent;font:600 var(--text-sm) var(--font-body);cursor:pointer;transition:background var(--dur-fast);';
-      btnWrong.textContent = '← No la sé';
-      btnWrong.setAttribute('aria-label', 'No sé esta palabra');
+      btnWrong.style.cssText = 'display:none;flex:1;height:48px;border-radius:var(--radius-pill);border:1.5px solid var(--red);color:var(--red);background:transparent;font:600 var(--text-sm) var(--font-body);cursor:pointer;transition:background var(--dur-fast);';
+      btnWrong.textContent = '✗ No la sabía';
+      btnWrong.setAttribute('aria-label', 'No sabía esta palabra');
       btnWrong.addEventListener('mouseenter', () => { btnWrong.style.background = 'var(--red-bg)'; });
       btnWrong.addEventListener('mouseleave', () => { btnWrong.style.background = 'transparent'; });
 
       const btnRight = document.createElement('button');
-      btnRight.style.cssText = 'flex:1;height:48px;border-radius:var(--radius-pill);background:var(--blue-700);color:#fff;font:600 var(--text-sm) var(--font-body);cursor:pointer;border:none;transition:background var(--dur-fast);';
-      btnRight.textContent = 'La sé →';
-      btnRight.setAttribute('aria-label', 'Sé esta palabra');
+      btnRight.style.cssText = 'display:none;flex:1;height:48px;border-radius:var(--radius-pill);background:var(--blue-700);color:#fff;font:600 var(--text-sm) var(--font-body);cursor:pointer;border:none;transition:background var(--dur-fast);';
+      btnRight.textContent = '✓ La sabía';
+      btnRight.setAttribute('aria-label', 'Sabía esta palabra');
       btnRight.addEventListener('mouseenter', () => { btnRight.style.background = 'var(--blue-800)'; });
       btnRight.addEventListener('mouseleave', () => { btnRight.style.background = 'var(--blue-700)'; });
 
+      btnRow.appendChild(btnShow);
       btnRow.appendChild(btnWrong);
       btnRow.appendChild(btnRight);
       el.appendChild(btnRow);
@@ -1331,6 +1339,11 @@
       function flipCard() {
         isFlipped = !isFlipped;
         card.classList.toggle('flipped', isFlipped);
+        if (isFlipped) {
+          btnShow.style.display = 'none';
+          btnWrong.style.display = 'flex';
+          btnRight.style.display = 'flex';
+        }
       }
 
       function qualify(correct) {
@@ -1391,8 +1404,8 @@
 
       // Keyboard (FLAS-05: Space=flip, ArrowRight=sabe, ArrowLeft=no sabe)
       function onKey(e) {
-        if (e.key === 'ArrowRight') { e.preventDefault(); if (isFlipped) qualify(true);  else flipCard(); }
-        if (e.key === 'ArrowLeft')  { e.preventDefault(); if (isFlipped) qualify(false); else flipCard(); }
+        if (e.key === 'ArrowRight' && isFlipped) { e.preventDefault(); qualify(true);  }
+        if (e.key === 'ArrowLeft'  && isFlipped) { e.preventDefault(); qualify(false); }
         if (e.key === ' ')          { e.preventDefault(); flipCard(); }
       }
       document.addEventListener('keydown', onKey);
@@ -1402,9 +1415,9 @@
       });
       observer.observe(document.getElementById('app-main'), { childList: true });
 
-      // Button handlers (flip first if not already flipped)
-      btnWrong.addEventListener('click', () => { if (!isFlipped) flipCard(); else qualify(false); });
-      btnRight.addEventListener('click', () => { if (!isFlipped) flipCard(); else qualify(true); });
+      btnShow.addEventListener('click', () => flipCard());
+      btnWrong.addEventListener('click', () => qualify(false));
+      btnRight.addEventListener('click', () => qualify(true));
     };
 
 
