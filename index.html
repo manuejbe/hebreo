@@ -623,6 +623,109 @@
       }, duration);
     };
 
+    /** Runs sync, manages button state, shows result panel or error toast. */
+    App.ui.syncRun = async function(btnEl) {
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--blue-200);border-top-color:var(--blue-700);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;"></span>Sincronizando…';
+      }
+      try {
+        const { diff, updatedAt } = await App.sync.run();
+        App.ui.renderSyncResult(diff, updatedAt);
+      } catch (err) {
+        const msgs = {
+          offline: 'Sin conexión — revisa tu internet',
+          timeout: 'URL no responde — intenta más tarde',
+          invalid: 'Formato no válido — revisa la URL del Apps Script'
+        };
+        App.ui.showToast('⚠ ' + (msgs[err.code] || err.message || 'Error desconocido'), 5000);
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = '🔄 Sincronizar';
+        }
+      }
+    };
+
+    /** Shows a modal-style result panel after a successful sync. All remote data via textContent (XSS-safe). */
+    App.ui.renderSyncResult = function(diff, updatedAt) {
+      const existing = document.getElementById('sync-result-panel');
+      if (existing) existing.remove();
+
+      const { added, modified, deleted } = diff;
+      const hasChanges = added.length + modified.length + deleted.length > 0;
+
+      let dateStr = '';
+      try { dateStr = new Date(updatedAt).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { dateStr = updatedAt; }
+
+      // Update lastSync in Inicio without full re-render
+      const syncDateEl = document.getElementById('sync-last-date');
+      if (syncDateEl) syncDateEl.textContent = dateStr;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'sync-result-panel';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(26,24,20,.45);backdrop-filter:blur(2px);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:var(--sp-4);animation:sync-overlay-in 250ms ease both;';
+
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);max-width:400px;width:100%;padding:var(--sp-6);animation:sync-panel-in 250ms var(--ease-out) both;max-height:80vh;overflow-y:auto;';
+
+      const summary = document.createElement('p');
+      summary.style.cssText = 'font:600 var(--text-base) var(--font-body);color:var(--text-primary);margin-bottom:var(--sp-4);';
+      summary.textContent = hasChanges
+        ? '✅ ' + added.length + ' nuevas · ' + modified.length + ' modificadas · ' + deleted.length + ' eliminadas'
+        : '✅ Sin cambios — el vocabulario está actualizado';
+      panel.appendChild(summary);
+
+      if (added.length > 0) {
+        const details = document.createElement('details');
+        details.style.cssText = 'border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:var(--sp-4);overflow:hidden;';
+        const summ = document.createElement('summary');
+        summ.style.cssText = 'padding:var(--sp-3) var(--sp-4);cursor:pointer;font:600 var(--text-sm) var(--font-body);color:var(--text-primary);list-style:none;background:var(--surface);';
+        summ.textContent = added.length + ' palabras nuevas ▸';
+        details.appendChild(summ);
+        const list = document.createElement('ul');
+        list.style.cssText = 'margin:0;padding:var(--sp-2) var(--sp-4) var(--sp-3);list-style:none;font-size:var(--text-sm);display:flex;flex-direction:column;gap:4px;';
+        for (const w of added) {
+          const li = document.createElement('li');
+          li.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:var(--sp-3);';
+          const esSpan = document.createElement('span');
+          esSpan.style.cssText = 'color:var(--text-secondary);';
+          esSpan.textContent = w.es;           // textContent — XSS safe
+          const heSpan = document.createElement('span');
+          heSpan.lang = 'he'; heSpan.dir = 'rtl'; heSpan.className = 'he';
+          heSpan.style.cssText = 'font-size:calc(var(--he-scale)*0.875rem);color:var(--text-primary);';
+          heSpan.textContent = w.msg || '';    // textContent — XSS safe
+          li.appendChild(esSpan); li.appendChild(heSpan);
+          list.appendChild(li);
+        }
+        details.appendChild(list);
+        panel.appendChild(details);
+
+        const studyBtn = document.createElement('button');
+        studyBtn.style.cssText = 'display:block;width:100%;padding:var(--sp-3) var(--sp-4);background:var(--blue-700);color:#fff;border-radius:var(--radius-md);font:700 var(--text-sm) var(--font-body);border:none;cursor:pointer;margin-bottom:var(--sp-3);';
+        studyBtn.textContent = '📚 Estudiar las nuevas';
+        studyBtn.addEventListener('click', () => { overlay.remove(); location.hash = '#/sesion'; });
+        panel.appendChild(studyBtn);
+      }
+
+      const closeBtn = document.createElement('button');
+      closeBtn.style.cssText = 'display:block;width:100%;padding:var(--sp-3) var(--sp-4);border:1.5px solid var(--border);border-radius:var(--radius-md);font:600 var(--text-sm) var(--font-body);background:transparent;color:var(--text-secondary);cursor:pointer;';
+      closeBtn.textContent = 'Cerrar';
+      closeBtn.addEventListener('click', () => overlay.remove());
+      panel.appendChild(closeBtn);
+
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+
+      if (!document.getElementById('sync-keyframes')) {
+        const s = document.createElement('style');
+        s.id = 'sync-keyframes';
+        s.textContent = '@keyframes spin { to { transform: rotate(360deg); } } @keyframes sync-overlay-in { from { opacity:0; } } @keyframes sync-panel-in { from { opacity:0; transform: translateY(12px); } }';
+        document.head.appendChild(s);
+      }
+    };
+
 
     /* === 5. DATOS: NORMALIZACIÓN Y CARGA === */
 
@@ -1429,8 +1532,8 @@
           <!-- Sync section -->
           <section style="margin-bottom: var(--sp-8); padding: var(--sp-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);">
-              <span style="font: 400 var(--text-sm) var(--font-body); color: var(--text-muted);">Última sincronización: <strong style="color: var(--text-secondary);">${lastSync}</strong></span>
-              <button onclick="App.ui.showToast('Sincronización disponible en la próxima versión')"
+              <span style="font: 400 var(--text-sm) var(--font-body); color: var(--text-muted);">Última sincronización: <strong id="sync-last-date" style="color: var(--text-secondary);">${lastSync}</strong></span>
+              <button onclick="App.ui.syncRun(this)"
                 style="padding: var(--sp-2) var(--sp-4); border: 1.5px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-secondary); font: 600 var(--text-sm) var(--font-body); cursor: pointer; min-height: 44px; transition: background var(--dur-fast);"
                 onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'"
                 aria-label="Sincronizar con Google Docs">
