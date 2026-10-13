@@ -533,6 +533,7 @@
         stats:      {},        // session stats (Plan 05)
         storageOk:  true       // false si localStorage no está disponible
       },
+      session: {},  // populated by session.start(); read by renderTarjetas / renderOpcionMultiple
       router: {},  // navigate, current route (Plan 03)
       ui:     {}   // render functions, toast
     };
@@ -964,6 +965,153 @@
     };
 
 
+    /* === 6b. SESSION ENGINE === */
+
+    App.session.start = function(mode) {
+      const st = App.ui._sesionState;   // { cats, filter, direction, quantity }
+      const catOrder = [];
+      const catSeen = new Set();
+      for (const w of App.state.vocab) { if (!catSeen.has(w.cat)) { catOrder.push(w.cat); catSeen.add(w.cat); } }
+      const selected = st.cats.length === 0 ? catOrder : st.cats;
+      const now = Date.now();
+      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+      let words = App.state.vocab.filter(w => selected.includes(w.cat));
+      if (st.filter === 'nuevas') {
+        words = words.filter(w => !App.state.progress[w.id] || App.state.progress[w.id].box === 0);
+      } else if (st.filter === 'dificiles') {
+        words = words.filter(w => { const p = App.state.progress[w.id]; if (!p) return true; return p.box <= 2 || (p.lastWrong && p.lastWrong >= sevenDaysAgo); });
+      } else if (st.filter === 'hoy') {
+        words = words.filter(w => { const p = App.state.progress[w.id]; return p && p.box > 0 && p.due <= now; });
+      }
+      // Shuffle (Fisher-Yates)
+      for (let i = words.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [words[i], words[j]] = [words[j], words[i]];
+      }
+      const qty = st.quantity === 0 ? words.length : st.quantity;
+      const startFn = App.session.start;  // preserve reference before replacing object
+      App.session = {
+        mode,
+        words: words.slice(0, qty),
+        index: 0,
+        direction: st.direction,
+        results: []    // { wordId, correct: bool }
+      };
+      App.session.start = startFn;  // re-attach so subsequent calls still work
+    };
+
+    App.ui.updateProgress = function(wordId, correct) {
+      const p = App.state.progress[wordId] || { box: 0, due: 0, seen: 0, correct: 0, wrong: 0, lastWrong: null, streak: 0 };
+      p.seen++;
+      if (correct) {
+        p.correct++;
+        p.streak = (p.streak || 0) + 1;
+        p.box = Math.min(p.box + 1, 5);          // per LEIT-02: sube una caja
+      } else {
+        p.wrong++;
+        p.streak = 0;
+        p.lastWrong = Date.now();
+        p.box = 1;                                 // per LEIT-02: vuelve a caja 1
+      }
+      // due timestamp placeholder (full intervals come in Phase 5)
+      p.due = Date.now();
+      App.state.progress[wordId] = p;
+      Store.set('ivrit.v1.progress', App.state.progress);  // persist after every answer
+    };
+
+    /**
+     * Renders session result screen. Called by renderTarjetas and renderOpcionMultiple.
+     * @param {HTMLElement} el — screen container
+     */
+    App.ui.renderResultado = function(el) {
+      const { results, words, mode } = App.session;
+      const total   = results.length;
+      const correct = results.filter(r => r.correct).length;
+      const wrong   = results.filter(r => !r.correct);
+
+      el.innerHTML = '';
+
+      // Header
+      const header = document.createElement('header');
+      header.style.cssText = 'padding:var(--sp-8) var(--sp-4) var(--sp-6);text-align:center;';
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+      const title = document.createElement('h1');
+      title.style.cssText = 'font:600 3rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-2);';
+      title.textContent = pct >= 80 ? '¡Muy bien!' : pct >= 50 ? 'Buen progreso' : 'Sigue practicando';
+      header.appendChild(title);
+
+      const sub = document.createElement('p');
+      sub.style.cssText = 'font:400 var(--text-base) var(--font-body);color:var(--text-muted);';
+      sub.textContent = correct + ' de ' + total + ' correctas (' + pct + '%)';
+      header.appendChild(sub);
+      el.appendChild(header);
+
+      // Wrong words list
+      if (wrong.length > 0) {
+        const section = document.createElement('section');
+        section.style.cssText = 'padding:0 var(--sp-4);margin-bottom:var(--sp-6);';
+        const h2 = document.createElement('h2');
+        h2.style.cssText = 'font:600 1.125rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-3);';
+        h2.textContent = 'Palabras a repasar (' + wrong.length + ')';
+        section.appendChild(h2);
+
+        const list = document.createElement('ul');
+        list.style.cssText = 'list-style:none;display:flex;flex-direction:column;gap:var(--sp-2);';
+        for (const r of wrong) {
+          const w = App.state.vocab.find(v => v.id === r.wordId);
+          if (!w) continue;
+          const li = document.createElement('li');
+          li.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:var(--sp-3) var(--sp-4);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);gap:var(--sp-3);';
+          const esSpan = document.createElement('span');
+          esSpan.style.cssText = 'font:600 var(--text-sm) var(--font-body);color:var(--text-primary);';
+          esSpan.textContent = w.es;    // textContent — XSS safe
+          const heSpan = document.createElement('span');
+          heSpan.lang = 'he'; heSpan.dir = 'rtl';
+          heSpan.style.cssText = 'font-family:var(--font-hebrew);font-size:calc(var(--he-scale)*0.95rem);color:var(--text-secondary);';
+          heSpan.textContent = w.msg || '';  // textContent — XSS safe
+          li.appendChild(esSpan);
+          li.appendChild(heSpan);
+          list.appendChild(li);
+        }
+        section.appendChild(list);
+        el.appendChild(section);
+      }
+
+      // Action buttons
+      const btnArea = document.createElement('div');
+      btnArea.style.cssText = 'padding:0 var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3);';
+
+      // "Repetir las que no sabia" — only if there are wrong words
+      if (wrong.length > 0) {
+        const retryBtn = document.createElement('button');
+        retryBtn.style.cssText = 'display:block;width:100%;padding:var(--sp-4);background:var(--blue-700);color:#fff;border-radius:var(--radius-lg);font:700 var(--text-lg) var(--font-body);border:none;cursor:pointer;transition:background var(--dur-fast);';
+        retryBtn.textContent = 'Repetir las que no sabia (' + wrong.length + ')';
+        retryBtn.setAttribute('aria-label', 'Repetir ' + wrong.length + ' palabras incorrectas');
+        retryBtn.addEventListener('mouseenter', () => { retryBtn.style.background = 'var(--blue-800)'; });
+        retryBtn.addEventListener('mouseleave', () => { retryBtn.style.background = 'var(--blue-700)'; });
+        retryBtn.addEventListener('click', () => {
+          // Start a new session with only the wrong words
+          App.session.words  = wrong.map(r => App.state.vocab.find(v => v.id === r.wordId)).filter(Boolean);
+          App.session.index  = 0;
+          App.session.results = [];
+          // Navigate to the same mode
+          location.hash = '#/' + (App.session.mode || 'tarjetas');
+        });
+        btnArea.appendChild(retryBtn);
+      }
+
+      const newBtn = document.createElement('button');
+      newBtn.style.cssText = 'display:block;width:100%;padding:var(--sp-3) var(--sp-4);border:1.5px solid var(--border);border-radius:var(--radius-lg);font:600 var(--text-base) var(--font-body);background:transparent;color:var(--text-secondary);cursor:pointer;transition:background var(--dur-fast);';
+      newBtn.textContent = 'Nueva sesion';
+      newBtn.addEventListener('mouseenter', () => { newBtn.style.background = 'var(--surface-hover)'; });
+      newBtn.addEventListener('mouseleave', () => { newBtn.style.background = 'transparent'; });
+      newBtn.addEventListener('click', () => { location.hash = '#/sesion'; });
+      btnArea.appendChild(newBtn);
+
+      el.appendChild(btnArea);
+    };
+
+
     /* === 6. ROUTER === */
 
     App.router = {
@@ -1026,12 +1174,15 @@
         screenEl.className = 'screen active page-enter';
 
         const renderers = {
-          inicio:      () => App.ui.renderInicio(screenEl),
-          diccionario: () => App.ui.renderDiccionario(screenEl),
-          sesion:      () => App.ui.renderSesion(screenEl),
+          inicio:           () => App.ui.renderInicio(screenEl),
+          diccionario:      () => App.ui.renderDiccionario(screenEl),
+          sesion:           () => App.ui.renderSesion(screenEl),
+          tarjetas:         () => App.ui.renderTarjetas(screenEl),
+          'opcion-multiple':() => App.ui.renderOpcionMultiple(screenEl),
+          resultado:        () => App.ui.renderResultado(screenEl),
         };
 
-        const stubs = ['tarjetas','opcion-multiple','unir','completar','concordancia',
+        const stubs = ['unir','completar','concordancia',
                        'escribir','clasificar','contrarreloj','estadisticas','configuracion'];
         if (renderers[parsed.route]) {
           renderers[parsed.route]();
@@ -1053,6 +1204,10 @@
         App.router.navigate(hash);
       }
     };
+
+    // Temporary stubs — replaced by Plan 02 and 03
+    App.ui.renderTarjetas       = App.ui.renderTarjetas       || function(el) { App.ui.renderStub(el, 'tarjetas'); };
+    App.ui.renderOpcionMultiple = App.ui.renderOpcionMultiple || function(el) { App.ui.renderStub(el, 'opcion-multiple'); };
 
     // Stub renderer for unimplemented screens
     App.ui.renderStub = function(el, route) {
@@ -1268,9 +1423,9 @@
       };
 
       App.ui._sesionEmpezar = function() {
-        // Phase 1 stub — study modes implemented in subsequent phases
-        App.ui.showToast('Modos de estudio disponibles próximamente');
-        // Future: read App.ui._sesionState, navigate to chosen mode
+        const mode = (App.session && App.session._pendingMode) || 'tarjetas';
+        App.session.start(mode);
+        location.hash = '#/' + mode;
       };
     };
 
@@ -1436,8 +1591,8 @@
 
       // Mode grid: all 10 modes, all unavailable in Phase 1
       const modes = [
-        { id: 'tarjetas',        icon: '🃏', name: 'Tarjetas',           desc: 'Memoriza con flashcards',           available: false },
-        { id: 'opcion-multiple', icon: '❓', name: 'Opción múltiple',    desc: 'Elige la traducción correcta',      available: false },
+        { id: 'tarjetas',        icon: '🃏', name: 'Tarjetas',           desc: 'Memoriza con flashcards',           available: true },
+        { id: 'opcion-multiple', icon: '❓', name: 'Opción múltiple',    desc: 'Elige la traducción correcta',      available: true },
         { id: 'unir',            icon: '↔',  name: 'Unir con flechas',   desc: 'Conecta pares español-hebreo',      available: false },
         { id: 'escribir',        icon: '✍',  name: 'Escribir',           desc: 'Escribe la traducción en hebreo',   available: false },
         { id: 'completar',       icon: '📝', name: 'Completar la forma', desc: 'Completa la forma correcta',        available: false },
@@ -1499,7 +1654,7 @@
               ${modes.map(m => `
                 <div class="mode-card"
                   style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); box-shadow: var(--shadow-sm); ${!m.available ? 'opacity: 0.45; pointer-events: none;' : 'cursor: pointer;'}"
-                  ${m.available ? `onclick="location.hash='#/${m.id}'" role="button" tabindex="0" aria-label="${m.name}"` : 'aria-hidden="true"'}>
+                  ${m.available ? `onclick="App.session._pendingMode='${m.id}';location.hash='#/sesion'" role="button" tabindex="0" aria-label="${m.name}"` : 'aria-hidden="true"'}>
                   <div style="font-size: 1.75rem; margin-bottom: var(--sp-2);" aria-hidden="true">${m.icon}</div>
                   <div style="font: 600 1rem var(--font-display); color: var(--text-primary); margin-bottom: var(--sp-1);">${m.name}</div>
                   <div style="font: 400 var(--text-xs) var(--font-body); color: var(--text-secondary);">${m.desc}</div>
