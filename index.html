@@ -3727,8 +3727,9 @@
 
       for (const w of allWords) {
         const btn = document.createElement('button');
-        btn.style.cssText = 'padding:var(--sp-2) var(--sp-3);border:1.5px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text-primary);font:600 var(--text-sm) var(--font-body);cursor:pointer;transition:all var(--dur-fast);';
-        btn.textContent = w.es;
+        btn.style.cssText = 'padding:var(--sp-2) var(--sp-3);border:1.5px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text-primary);font-family:var(--font-hebrew);font-size:calc(var(--he-scale)*0.95rem);font-weight:600;cursor:pointer;transition:all var(--dur-fast);direction:rtl;';
+        btn.lang = 'he'; btn.dir = 'rtl';
+        btn.textContent = w.msg || w.es;
         btn.dataset.cat = w.cat;
 
         btn.addEventListener('click', () => {
