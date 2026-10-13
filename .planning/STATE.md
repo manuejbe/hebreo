@@ -6,10 +6,10 @@ status: in_progress
 last_updated: "2026-10-13T19:00:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 15
-  completed_plans: 10
-  percent: 67
+  completed_plans: 11
+  percent: 73
 ---
 
 # State: Ivrit
@@ -23,17 +23,17 @@ See: `.planning/PROJECT.md` (updated 2026-10-13)
 
 ## Current Phase
 
-**Phase 4: Unir con flechas — IN PROGRESS (1/2 plans complete)**
+**Phase 4: Unir con flechas — COMPLETED (2/2 plans complete)**
 Goal: El modo de matching con líneas SVG funciona en móvil y desktop, con tap y variantes (ES↔HE, sg↔pl, masc↔fem).
 
-Status: In progress — 2 plans, 2 waves (2026-10-13)
+Status: Completed — 2 plans, 2 waves (2026-10-13)
 
 **Plans:**
 
 - [x] Plan 01 (Wave 1): renderUnir — layout 2 cols, tap-tap logic, SVG lines, feedback, round summary (MATC-01,02,03,04,06) — `b7876de`
-- [ ] Plan 02 (Wave 2): Variant selector in renderSesion + session.start filtering + router wiring (MATC-05,06)
+- [x] Plan 02 (Wave 2): Variant selector in renderSesion + session.start filtering (MATC-05,06) — `edf8c6b`
 
-**Next:** `/gsd-execute-phase 4` (Plan 02)
+**Next:** `/gsd-plan-phase 5`
 
 ## Phase History
 
@@ -42,6 +42,7 @@ Status: In progress — 2 plans, 2 waves (2026-10-13)
 | Phase 1: Base | Completed | 2026-10-13 |
 | Phase 2: Sincronización | Completed | 2026-10-13 |
 | Phase 3: Tarjetas y MCQ | Completed | 2026-10-13 |
+| Phase 4: Unir con flechas | Completed | 2026-10-13 |
 
 ## Active Blockers
 
@@ -67,6 +68,9 @@ None.
 - Validación allowlist de lastSession al cargar (T-05-01) — campos inválidos caen a defaults silenciosamente
 - Re-render completo en cada interacción de sesión (rerender()) — 735 palabras, <1ms, más simple que diff parcial
 - state.cats = [] semántica 'todas seleccionadas' — evita sincronizar con catOrder al agregar categorías futuras
+- Sección Dirección/Variante condicional en renderSesion — una expresión ternaria reemplaza toda la section según _pendingMode
+- App.session._matchVariant seteado en _sesionEmpezar antes de start() — sigue patrón closure existente sin parámetros extra
+- Filtro variante en session.start lee _matchVariant pre-reemplazo del objeto session; fallback 'es-he' cubre primer arranque
 
 ## Key Context for Next Phase
 
@@ -81,7 +85,9 @@ None.
 - Router renderers map cubre: tarjetas, opcion-multiple, resultado, unir (no stubs)
 - `App.state.progress{}` en localStorage `ivrit.v1.progress`: box 0-5, lastWrong timestamp
 - `App.ui.renderUnir(el)` — tap-tap matching: 6 pares/ronda, SVG overlay, shake 400ms, resumen inline, Leitner solo ES↔HE
-- `App.session._matchVariant` — variant field ('es-he'|'sg-pl'|'masc-fem'); defaults a 'es-he' en renderUnir; selector en Plan 02
+- `App.session._matchVariant` — variant field ('es-he'|'sg-pl'|'masc-fem'); seteado en _sesionEmpezar, leído en session.start y renderUnir
+- `renderSesion` muestra "Variante" (3 chips) cuando `_pendingMode === 'unir'`, "Dirección" para todos los otros modos
+- `App.session.start('unir')` filtra: sg-pl → `mpl && mpl !== msg`; masc-fem → `kind === 'gendered'`; antes del shuffle
 
 ## Performance Metrics
 
@@ -93,8 +99,9 @@ None.
 | 01-base | 04 | 6min | 1 | 1 |
 | 01-base | 05 | 4min | 1 | 1 |
 | 04-unir-con-flechas | 01 | 8min | 1 | 1 |
+| 04-unir-con-flechas | 02 | 5min | 2 | 1 |
 
 ---
-*Last session: 2026-10-13T20:00:00Z — Phase 4 Plan 01 ejecutado: App.ui.renderUnir completo (tap-tap, SVG, shake, resumen inline)*
-*Stopped at: Phase 4 Plan 02 (variant selector in renderSesion)*
-*Next: /gsd-execute-phase 4 (Plan 02)*
+*Last session: 2026-10-13T21:00:00Z — Phase 4 Plan 02 ejecutado: variant selector en renderSesion + filtro por variante en session.start*
+*Stopped at: Phase 4 completed — 2/2 plans done*
+*Next: /gsd-plan-phase 5*
