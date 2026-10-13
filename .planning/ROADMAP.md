@@ -77,6 +77,12 @@ Plans:
 - Motor de diff por id de palabra
 - UI de resumen con lista desplegable de nuevas
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — App.sync module: fetchWithTimeout (20s), validateRaw, diffVocab, applyDiff, run
+- [ ] 02-02-PLAN.md — Sync UI: spinner button, result panel with new-word list, error toasts, wire renderInicio
+
 ---
 
 ## Phase 3: Tarjetas y Opción múltiple
