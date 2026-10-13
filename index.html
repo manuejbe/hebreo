@@ -1005,7 +1005,8 @@
         words: words.slice(0, qty),
         index: 0,
         direction: st.direction,
-        results: []    // { wordId, correct: bool }
+        results: [],   // { wordId, correct: bool }
+        _matchVariant: App.session._matchVariant  // preserve for renderUnir (D-05/WR-01)
       };
       App.session.start = startFn;  // re-attach so subsequent calls still work
     };
@@ -1829,8 +1830,8 @@
       const variant = App.session._matchVariant || 'es-he';
       function getLeftText(w)  { return variant === 'es-he' ? w.es : w.msg; }
       function getRightText(w) {
-        if (variant === 'sg-pl')    return w.mpl;
-        if (variant === 'masc-fem') return w.fsg;
+        if (variant === 'sg-pl')    return w.mpl || '';
+        if (variant === 'masc-fem') return w.fsg || '';
         return w.msg;
       }
       // Right side is Hebrew for es-he; both sides Hebrew for sg-pl and masc-fem
