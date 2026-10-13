@@ -872,8 +872,209 @@
         </div>`;
     };
 
-    // Stub renderer for sesion (implemented in Plan 05)
-    App.ui.renderSesion = function(el) { App.ui.renderStub(el, 'sesion'); };
+    /* === 7b. SELECTOR DE SESIÓN (SPEC §4.2) === */
+
+    App.ui.renderSesion = function(el) {
+      // Build category order and counts from vocab
+      const catOrder = [];
+      const catCounts = {};
+      for (const w of App.state.vocab) {
+        if (!catCounts[w.cat]) { catOrder.push(w.cat); catCounts[w.cat] = 0; }
+        catCounts[w.cat]++;
+      }
+
+      // Load last session from localStorage — validate all fields (T-05-01)
+      const savedSettings = Store.get('ivrit.v1.settings') || {};
+      const raw = (savedSettings.lastSession && typeof savedSettings.lastSession === 'object') ? savedSettings.lastSession : {};
+      const VALID_FILTERS    = ['todas', 'nuevas', 'dificiles', 'hoy'];
+      const VALID_DIRECTIONS = ['es-he', 'he-es', 'mezclada'];
+      const VALID_QUANTITIES = [10, 20, 30, 0];
+      const state = {
+        cats:      (Array.isArray(raw.cats) && raw.cats.every(c => typeof c === 'string')) ? raw.cats : catOrder.slice(),
+        filter:    VALID_FILTERS.includes(raw.filter)       ? raw.filter    : 'todas',
+        direction: VALID_DIRECTIONS.includes(raw.direction) ? raw.direction : 'es-he',
+        quantity:  VALID_QUANTITIES.includes(raw.quantity)  ? raw.quantity  : 10
+      };
+
+      function saveState() {
+        const settings = Store.get('ivrit.v1.settings') || {};
+        settings.lastSession = { cats: state.cats.slice(), filter: state.filter, direction: state.direction, quantity: state.quantity };
+        Store.set('ivrit.v1.settings', settings);
+      }
+
+      function getMatchingWords() {
+        const selected = state.cats.length === 0 ? catOrder : state.cats;
+        let words = App.state.vocab.filter(w => selected.includes(w.cat));
+        const now = Date.now();
+        const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+        if (state.filter === 'nuevas') {
+          words = words.filter(w => !App.state.progress[w.id] || App.state.progress[w.id].box === 0);
+        } else if (state.filter === 'dificiles') {
+          words = words.filter(w => {
+            const p = App.state.progress[w.id];
+            if (!p) return true; // unstarted = box 0 = difícil
+            return p.box <= 2 || (p.lastWrong && p.lastWrong >= sevenDaysAgo);
+          });
+        } else if (state.filter === 'hoy') {
+          words = words.filter(w => {
+            const p = App.state.progress[w.id];
+            return p && p.box > 0 && p.due <= now;
+          });
+        }
+        return words;
+      }
+
+      function rerender() {
+        saveState();
+        App.ui.renderSesion(el);
+      }
+
+      const matching = getMatchingWords();
+      const qty = state.quantity === 0 ? matching.length : state.quantity;
+      const hasEnough = matching.length >= Math.min(qty, 1);
+      const isInsufficient = state.quantity !== 0 && matching.length < state.quantity && matching.length > 0;
+
+      // Build chip HTML helper
+      function chip(label, selected, onclick, extraStyle) {
+        const base = `border-radius:var(--radius-pill);padding:6px 14px;font:600 var(--text-sm) var(--font-body);cursor:pointer;min-height:36px;transition:background var(--dur-fast),border-color var(--dur-fast);`;
+        const style = selected
+          ? base + 'background:var(--blue-700);color:#fff;border:1.5px solid transparent;'
+          : base + 'background:transparent;color:var(--text-secondary);border:1.5px solid var(--border);' + (extraStyle || '');
+        return `<button onclick="${onclick}" style="${style}" aria-pressed="${selected}">${label}</button>`;
+      }
+
+      el.innerHTML = `
+        <div class="screen-sesion">
+          <header style="margin-bottom:var(--sp-5);">
+            <h1 style="font:600 var(--text-4xl) var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-2);">Nueva sesión</h1>
+            <p style="font-size:var(--text-sm);color:var(--text-muted);">Elige qué estudiar hoy</p>
+          </header>
+
+          <!-- Categories -->
+          <section style="margin-bottom:var(--sp-6);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-3);">
+              <h2 style="font:600 1.125rem var(--font-display);color:var(--text-primary);">Categorías</h2>
+              <div style="display:flex;gap:var(--sp-2);">
+                <button onclick="App.ui._sesionSelectAll()"
+                  style="padding:4px 12px;border:1.5px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--text-secondary);font:600 var(--text-xs) var(--font-body);cursor:pointer;min-height:32px;transition:background var(--dur-fast);"
+                  onmouseover="this.style.background='var(--blue-50)'" onmouseout="this.style.background='transparent'">Todas</button>
+                <button onclick="App.ui._sesionSelectNone()"
+                  style="padding:4px 12px;border:1.5px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--text-secondary);font:600 var(--text-xs) var(--font-body);cursor:pointer;min-height:32px;transition:background var(--dur-fast);"
+                  onmouseover="this.style.background='var(--blue-50)'" onmouseout="this.style.background='transparent'">Ninguna</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+              ${catOrder.map(cat => {
+                const sel = state.cats.includes(cat);
+                // T-05-02: cat names from local vocab.json (trusted); apostrophes escaped
+                const safecat = cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                return `<button onclick="App.ui._sesionToggleCat('${safecat}')"
+                  style="border-radius:var(--radius-pill);padding:6px 14px;font:600 var(--text-sm) var(--font-body);cursor:pointer;min-height:36px;transition:background var(--dur-fast),border-color var(--dur-fast);${sel?'background:var(--blue-700);color:#fff;border:1.5px solid transparent;':'background:transparent;color:var(--text-secondary);border:1.5px solid var(--border);'}"
+                  aria-pressed="${sel}">
+                  ${cat} <span style="opacity:.7;">${catCounts[cat]}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- Filter -->
+          <section style="margin-bottom:var(--sp-5);">
+            <h2 style="font:600 1.125rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-3);">Filtro</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+              ${[{val:'todas',label:'Todas'},{val:'nuevas',label:'Nuevas'},{val:'dificiles',label:'Difíciles'},{val:'hoy',label:'Para hoy'}].map(opt => {
+                const sel = state.filter === opt.val;
+                return `<button onclick="App.ui._sesionSetFilter('${opt.val}')"
+                  style="border-radius:var(--radius-pill);padding:6px 14px;font:600 var(--text-sm) var(--font-body);cursor:pointer;min-height:36px;transition:background var(--dur-fast),border-color var(--dur-fast);${sel?'background:var(--blue-700);color:#fff;border:1.5px solid transparent;':'background:transparent;color:var(--text-secondary);border:1.5px solid var(--border);'}"
+                  aria-pressed="${sel}">${opt.label}</button>`;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- Direction -->
+          <section style="margin-bottom:var(--sp-5);">
+            <h2 style="font:600 1.125rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-3);">Dirección</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+              ${[{val:'es-he',label:'ES → HE'},{val:'he-es',label:'HE → ES'},{val:'mezclada',label:'Mezclada'}].map(opt => {
+                const sel = state.direction === opt.val;
+                return `<button onclick="App.ui._sesionSetDirection('${opt.val}')"
+                  style="border-radius:var(--radius-pill);padding:6px 14px;font:600 var(--text-sm) var(--font-body);cursor:pointer;min-height:36px;transition:background var(--dur-fast),border-color var(--dur-fast);${sel?'background:var(--blue-700);color:#fff;border:1.5px solid transparent;':'background:transparent;color:var(--text-secondary);border:1.5px solid var(--border);'}"
+                  aria-pressed="${sel}">${opt.label}</button>`;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- Quantity -->
+          <section style="margin-bottom:var(--sp-6);">
+            <h2 style="font:600 1.125rem var(--font-display);color:var(--text-primary);margin-bottom:var(--sp-3);">Cantidad</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+              ${[10,20,30,0].map(q => {
+                const sel = state.quantity === q;
+                const label = q === 0 ? 'Todas' : String(q);
+                return `<button onclick="App.ui._sesionSetQuantity(${q})"
+                  style="border-radius:var(--radius-pill);padding:6px 20px;font:600 var(--text-sm) var(--font-body);cursor:pointer;min-height:36px;transition:background var(--dur-fast),border-color var(--dur-fast);${sel?'background:var(--blue-700);color:#fff;border:1.5px solid transparent;':'background:transparent;color:var(--text-secondary);border:1.5px solid var(--border);'}"
+                  aria-pressed="${sel}">${label}</button>`;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- Warning if insufficient words -->
+          ${isInsufficient ? `
+            <div style="padding:var(--sp-3) var(--sp-4);background:var(--amber-bg);border:1px solid var(--amber-light);border-radius:var(--radius-md);margin-bottom:var(--sp-4);font-size:var(--text-sm);color:var(--amber);">
+              Solo hay ${matching.length} palabras con estos filtros. Se usarán todas.
+            </div>` : ''}
+
+          <!-- Empezar button -->
+          <button ${!hasEnough ? 'disabled' : ''} onclick="App.ui._sesionEmpezar()"
+            style="display:block;width:100%;padding:var(--sp-4);background:${hasEnough?'var(--blue-700)':'var(--border)'};color:${hasEnough?'var(--text-on-primary)':'var(--text-muted)'};border-radius:var(--radius-lg);font:700 var(--text-lg) var(--font-body);border:none;cursor:${hasEnough?'pointer':'not-allowed'};transition:background var(--dur-fast);margin-bottom:var(--sp-8);"
+            ${hasEnough?'onmouseover="this.style.background=\'var(--blue-800)\'" onmouseout="this.style.background=\'var(--blue-700)\'"':''}
+            aria-label="Empezar sesión con ${matching.length} palabras">
+            ${hasEnough ? `Empezar · ${matching.length} palabras` : 'Sin palabras para este filtro'}
+          </button>
+
+          <div style="height:var(--sp-4);"></div>
+        </div>`;
+
+      // Attach handlers (closures over state + rerender)
+      App.ui._sesionState = state;
+
+      App.ui._sesionToggleCat = function(cat) {
+        const idx = state.cats.indexOf(cat);
+        if (idx >= 0) state.cats.splice(idx, 1);
+        else state.cats.push(cat);
+        rerender();
+      };
+
+      App.ui._sesionSelectAll = function() {
+        state.cats = catOrder.slice();
+        rerender();
+      };
+
+      App.ui._sesionSelectNone = function() {
+        state.cats = [];
+        rerender();
+      };
+
+      App.ui._sesionSetFilter = function(f) {
+        state.filter = f;
+        rerender();
+      };
+
+      App.ui._sesionSetDirection = function(d) {
+        state.direction = d;
+        rerender();
+      };
+
+      App.ui._sesionSetQuantity = function(q) {
+        state.quantity = q;
+        rerender();
+      };
+
+      App.ui._sesionEmpezar = function() {
+        // Phase 1 stub — study modes implemented in subsequent phases
+        App.ui.showToast('Modos de estudio disponibles próximamente');
+        // Future: read App.ui._sesionState, navigate to chosen mode
+      };
+    };
 
 
     /* === 8. DICCIONARIO: SEARCH NORMALIZATION === */
