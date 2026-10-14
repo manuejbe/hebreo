@@ -475,16 +475,6 @@
       <span>Inicio</span>
     </a>
 
-    <a href="#/sesion" class="nav-item" data-route="sesion" aria-label="Estudiar">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="1.75"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-      <span>Estudiar</span>
-    </a>
-
     <a href="#/diccionario" class="nav-item" data-route="diccionario" aria-label="Diccionario">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
            fill="none" stroke="currentColor" stroke-width="1.75"
@@ -1476,10 +1466,8 @@
         // Update nav active state
         document.querySelectorAll('.nav-item').forEach(el => {
           const r = el.dataset.route;
-          const studyRoutes = ['sesion','tarjetas','opcion-multiple','unir','completar','concordancia','escribir','clasificar','contrarreloj'];
           let active = false;
-          if (r === 'sesion')        active = studyRoutes.includes(parsed.route);
-          else if (r === 'estadisticas')  active = parsed.route === 'estadisticas';
+          if (r === 'estadisticas')       active = parsed.route === 'estadisticas';
           else if (r === 'configuracion') active = parsed.route === 'configuracion';
           else if (r === 'diccionario')   active = parsed.route === 'diccionario';
           else if (r === 'inicio')        active = parsed.route === 'inicio';
@@ -4227,12 +4215,10 @@
         'contrarreloj':    () => App.ui.renderContrarreloj(screenEl),
       };
 
-      const studyRoutes = ['sesion','tarjetas','opcion-multiple','unir','completar','concordancia','escribir','clasificar','contrarreloj','repaso-dia','repaso-errores'];
       document.querySelectorAll('.nav-item').forEach(el2 => {
         const r = el2.dataset.route;
         let active = false;
-        if (r === 'sesion')         active = studyRoutes.includes(parsed.route);
-        else if (r === 'estadisticas')  active = parsed.route === 'estadisticas';
+        if (r === 'estadisticas')       active = parsed.route === 'estadisticas';
         else if (r === 'configuracion') active = parsed.route === 'configuracion';
         else if (r === 'diccionario')   active = parsed.route === 'diccionario';
         else if (r === 'inicio')        active = parsed.route === 'inicio';
